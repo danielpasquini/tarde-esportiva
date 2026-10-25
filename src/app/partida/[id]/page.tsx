@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { getMatch } from "@/lib/match";
 import { formatMatchDate } from "@/lib/format";
@@ -21,63 +22,93 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
   const available = roster.filter((p) => !confirmedIds.has(p.id));
 
   return (
-    <div className="space-y-7">
-      <header className="card card-pad rise">
+    <div className="flex flex-col gap-6">
+      <header className="border-[3px] border-moss bg-paper p-4 shadow-hard">
+        <Link href="/" className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-moss-soft mb-2">
+          <ArrowLeft className="size-3.5" /> Voltar
+        </Link>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="kicker">Súmula da partida</p>
-            <h1 className="display text-3xl mt-1 first-letter:uppercase">{formatMatchDate(match.date)}</h1>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-moss-soft">Partida</span>
+            <h1 className="font-serif text-3xl first-letter:uppercase leading-tight">{formatMatchDate(match.date)}</h1>
           </div>
           <StatusStamp status={match.status} votingOpen={match.votingOpen} />
         </div>
-        <hr className="rule my-3" />
-        <p className="mono text-sm">
-          {match.numTeams} times × {match.lineSize} na linha · {match.attendances.length} confirmados
-        </p>
+        <div className="mt-3 pt-3 border-t-2 border-moss/20 flex items-center justify-between text-xs text-moss-soft font-semibold">
+          <span>{match.numTeams} times × {match.lineSize} na linha</span>
+          <span>{match.attendances.length} atletas confirmados</span>
+        </div>
       </header>
 
       {match.votingOpen && (
-        <Link href={`/votar/${match.voteToken}`} className="btn btn-brick btn-block" id="ir-votacao">
-          Votação aberta · avaliar companheiros →
+        <Link
+          href={`/votar/${match.voteToken}`}
+          className="flex items-center justify-between border-[3px] border-moss bg-paper-dark px-4 py-3.5 shadow-hard-brick text-moss transition-transform active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+          id="ir-votacao"
+        >
+          <div>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Urna aberta</span>
+            <span className="block font-serif text-lg leading-tight">Votação Pós-Jogo</span>
+          </div>
+          <ArrowRight className="size-5 text-brick" />
         </Link>
       )}
 
+      {/* Confirmação de presença */}
       {match.status !== "FINISHED" && (
-        <section className="card card-pad space-y-4">
-          <h2 className="display text-xl">Vai jogar?</h2>
+        <section className="border-[3px] border-moss bg-paper p-4 shadow-hard flex flex-col gap-3">
+          <h2 className="font-serif text-xl">Confirmação de Presença</h2>
           {available.length ? (
             <form action={confirmPresence.bind(null, match.id)} className="flex gap-2">
               <label htmlFor="confirm-player" className="sr-only">
                 Seu nome
               </label>
-              <select id="confirm-player" name="playerId" className="field" required defaultValue="">
+              <select
+                id="confirm-player"
+                name="playerId"
+                className="flex-1 border-2 border-moss bg-paper px-3 py-2 text-sm text-moss outline-none"
+                required
+                defaultValue=""
+              >
                 <option value="" disabled>
                   Selecione seu nome
                 </option>
                 {available.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name}
+                    {p.name} {p.isGoalkeeper ? "(Goleiro)" : ""}
                   </option>
                 ))}
               </select>
-              <SubmitButton className="btn btn-moss shrink-0" id="confirmar-presenca">
-                Tô dentro
+              <SubmitButton className="bg-moss text-paper hover:bg-moss-soft" id="confirmar-presenca">
+                Confirmar
               </SubmitButton>
             </form>
           ) : (
-            <p className="kicker">Todos os jogadores do grupo já confirmaram.</p>
+            <p className="text-xs text-moss-soft">Todos os jogadores ativos já confirmaram presença.</p>
           )}
+
           {match.status === "DRAWN" && (
-            <p className="text-sm text-ink/70">Times já sorteados: novas confirmações entram no banco de reservas.</p>
+            <p className="text-xs text-moss-soft">
+              Times já sorteados: novas confirmações entram no banco de reservas.
+            </p>
           )}
+
           {match.status === "OPEN" && match.attendances.length > 0 && (
-            <details>
-              <summary className="kicker underline">Não vai mais? Desconfirmar</summary>
-              <form action={cancelPresence.bind(null, match.id)} className="flex gap-2 mt-3">
+            <details className="mt-1">
+              <summary className="text-xs font-bold uppercase tracking-wider text-brick cursor-pointer underline">
+                Desconfirmar Presença
+              </summary>
+              <form action={cancelPresence.bind(null, match.id)} className="flex gap-2 mt-2 pt-2 border-t border-moss/20">
                 <label htmlFor="cancel-player" className="sr-only">
                   Seu nome
                 </label>
-                <select id="cancel-player" name="playerId" className="field" required defaultValue="">
+                <select
+                  id="cancel-player"
+                  name="playerId"
+                  className="flex-1 border-2 border-moss bg-paper px-3 py-2 text-sm text-moss outline-none"
+                  required
+                  defaultValue=""
+                >
                   <option value="" disabled>
                     Selecione seu nome
                   </option>
@@ -87,8 +118,8 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
                     </option>
                   ))}
                 </select>
-                <SubmitButton className="btn btn-brick shrink-0" id="desconfirmar-presenca">
-                  Sair
+                <SubmitButton className="bg-brick text-paper" id="desconfirmar-presenca">
+                  Remover
                 </SubmitButton>
               </form>
             </details>
@@ -96,18 +127,18 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
         </section>
       )}
 
-      <section>
-        <div className="section-head">
-          <h2 className="display text-2xl">{match.status === "OPEN" ? "Lista de presença" : "Escalação por colete"}</h2>
-        </div>
+      {/* Escalação ou lista prévia */}
+      <section className="flex flex-col gap-4">
+        <h2 className="font-serif text-2xl">
+          {match.status === "OPEN" ? "Lista de Presença" : "Escalação por Colete"}
+        </h2>
         {match.status === "OPEN" ? <PreDrawList match={match} /> : <TeamsBoard match={match} />}
       </section>
 
+      {/* Placares */}
       {match.status !== "OPEN" && (
-        <section>
-          <div className="section-head">
-            <h2 className="display text-2xl">Placares</h2>
-          </div>
+        <section className="flex flex-col gap-3">
+          <h2 className="font-serif text-2xl">Placares dos Jogos</h2>
           <Scoreboard match={match} />
         </section>
       )}
@@ -117,7 +148,7 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
 
 export default function MatchPage({ params }: PageProps<"/partida/[id]">) {
   return (
-    <Suspense fallback={<Loading />}>
+    <Suspense fallback={<Loading label="Carregando partida…" />}>
       <MatchView params={params} />
     </Suspense>
   );

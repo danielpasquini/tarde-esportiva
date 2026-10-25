@@ -1,11 +1,14 @@
 export const TEAM_ORDER = ["AZUL", "VERMELHO", "PRETO", "AMARELO"] as const;
 export type TeamKey = (typeof TEAM_ORDER)[number];
 
-export const TEAM_META: Record<TeamKey, { label: string; color: string; ink: string }> = {
-  AZUL: { label: "Azul", color: "#2B4C7E", ink: "#F4F1EA" },
-  VERMELHO: { label: "Vermelho", color: "#9E2A2B", ink: "#F4F1EA" },
-  PRETO: { label: "Preto", color: "#1F1F1F", ink: "#F4F1EA" },
-  AMARELO: { label: "Amarelo", color: "#D9A520", ink: "#1F1F1F" },
+export const TEAM_META: Record<
+  TeamKey,
+  { label: string; swatch: string; text: string; hex: string }
+> = {
+  AZUL: { label: "Azul", swatch: "bg-[#2c4a6e]", text: "text-paper", hex: "#2c4a6e" },
+  VERMELHO: { label: "Vermelho", swatch: "bg-[#9e2a2b]", text: "text-paper", hex: "#9e2a2b" },
+  PRETO: { label: "Preto", swatch: "bg-[#1f1f1f]", text: "text-paper", hex: "#1f1f1f" },
+  AMARELO: { label: "Amarelo", swatch: "bg-[#d9a520]", text: "text-moss", hex: "#d9a520" },
 };
 
 export function teamsFor(numTeams: number): TeamKey[] {

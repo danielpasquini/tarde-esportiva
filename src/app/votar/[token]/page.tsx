@@ -2,11 +2,11 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
-import { formatMatchDate } from "@/lib/format";
 import { TEAM_META, isTeam, teamsFor } from "@/lib/teams";
 import { VoteForm } from "@/components/vote-form";
-import { Loading } from "@/components/ui";
+import { Loading, TeamDot } from "@/components/ui";
 
 async function VoteView({
   params,
@@ -28,24 +28,17 @@ async function VoteView({
     .map((a) => ({ id: a.playerId, name: a.player.name, team: a.team, isGoalkeeper: a.asGoalkeeper }))
     .sort((a, b) => order.indexOf(a.team ?? "") - order.indexOf(b.team ?? "") || a.name.localeCompare(b.name));
 
-  const header = (
-    <header className="text-center rise">
-      <p className="kicker">Votação pós-jogo</p>
-      <h1 className="display text-3xl mt-1 first-letter:uppercase">{formatMatchDate(match.date)}</h1>
-    </header>
-  );
-
   if (!match.votingOpen) {
     return (
-      <div className="space-y-6">
-        {header}
-        <div className="card card-pad text-center">
-          <p className="display text-xl">Votação fechada</p>
-          <p className="kicker mt-2">Aguarde o organizador abrir ou confira o resultado na súmula</p>
-          <Link href={`/partida/${match.id}`} className="btn mt-4">
-            Ver súmula
-          </Link>
-        </div>
+      <div className="border-[3px] border-moss bg-paper p-6 text-center shadow-hard">
+        <h2 className="font-serif text-2xl">Votação Fechada</h2>
+        <p className="mt-2 text-xs text-moss-soft">Esta votação não está recebendo notas no momento.</p>
+        <Link
+          href={`/partida/${match.id}`}
+          className="mt-4 inline-flex items-center border-2 border-moss bg-paper-dark px-4 py-2 text-xs font-bold uppercase tracking-wider shadow-hard-sm"
+        >
+          Ver Súmula da Partida
+        </Link>
       </div>
     );
   }
@@ -55,32 +48,34 @@ async function VoteView({
 
   if (!voter) {
     return (
-      <div className="space-y-6">
-        {header}
-        <section className="card rise">
-          <div className="team-band">
-            <span className="display text-lg">Quem é você?</span>
-            <span className="mono text-xs">Toque no seu nome</span>
-          </div>
-          <ul className="grid grid-cols-2 gap-2 p-3">
-            {people.map((p) => {
-              const meta = isTeam(p.team) ? TEAM_META[p.team] : null;
-              return (
-                <li key={p.id}>
-                  <Link
-                    href={`/votar/${token}?jogador=${p.id}`}
-                    className="btn btn-block justify-start! normal-case! tracking-normal! text-sm!"
-                    id={`eu-sou-${p.id}`}
-                  >
-                    <span className="team-dot" style={{ background: meta?.color }} aria-hidden />
-                    <span className="truncate">{p.name}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      </div>
+      <section className="flex flex-col gap-4">
+        <div>
+          <h2 className="font-serif text-3xl leading-tight">Quem é você?</h2>
+          <p className="mt-1 text-xs text-moss-soft">Selecione seu nome para abrir a cédula de votação.</p>
+        </div>
+
+        <ul className="border-[3px] border-moss bg-paper shadow-hard divide-y-2 divide-dashed divide-moss/30">
+          {people.map((p) => {
+            const meta = isTeam(p.team) ? TEAM_META[p.team] : null;
+            return (
+              <li key={p.id}>
+                <Link
+                  href={`/votar/${token}?jogador=${p.id}`}
+                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-paper-dark"
+                  id={`eu-sou-${p.id}`}
+                >
+                  <span className={`size-3 shrink-0 border-2 border-moss ${meta?.swatch ?? "bg-paper"}`} aria-hidden="true" />
+                  <span className="flex-1 font-serif text-lg leading-tight">{p.name}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-moss-soft">
+                    {meta?.label}
+                  </span>
+                  <ChevronRight className="size-4 text-moss-soft" aria-hidden="true" />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
     );
   }
 
@@ -89,14 +84,22 @@ async function VoteView({
   const others = people.filter((p) => p.id !== voter.id);
 
   return (
-    <div className="space-y-6">
-      {header}
-      <p className="text-center text-sm">
-        Votando como <strong>{voter.name}</strong> ·{" "}
-        <Link href={`/votar/${token}`} className="underline">
-          não sou eu
+    <div className="flex flex-col gap-6">
+      {/* Barra de identificação do votante */}
+      <div className="flex items-center gap-3 border-[3px] border-moss bg-paper-dark px-3 py-2.5 shadow-hard-sm">
+        <TeamDot team={voter.team ?? ""} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Votando como</p>
+          <p className="truncate font-serif text-lg leading-tight">{voter.name}</p>
+        </div>
+        <Link
+          href={`/votar/${token}`}
+          className="border-2 border-moss px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-paper"
+        >
+          Trocar
         </Link>
-      </p>
+      </div>
+
       <VoteForm
         token={token}
         voter={voter}
@@ -110,7 +113,7 @@ async function VoteView({
 
 export default function VotePage({ params, searchParams }: PageProps<"/votar/[token]">) {
   return (
-    <Suspense fallback={<Loading label="Abrindo a urna…" />}>
+    <Suspense fallback={<Loading label="Carregando votação…" />}>
       <VoteView params={params} searchParams={searchParams} />
     </Suspense>
   );
