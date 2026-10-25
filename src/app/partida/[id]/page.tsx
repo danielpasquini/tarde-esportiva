@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { getMatch } from "@/lib/match";
 import { formatMatchDate } from "@/lib/format";
 import { confirmPresence, cancelPresence } from "@/app/actions";
-import { PreDrawList, Scoreboard, TeamsBoard } from "@/components/lineup";
+import { PreDrawList, TeamsBoard } from "@/components/lineup";
 import { SubmitButton } from "@/components/client";
 import { Loading, StatusStamp } from "@/components/ui";
 
@@ -52,6 +52,40 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
           </div>
           <ArrowRight className="size-5 text-brick" />
         </Link>
+      )}
+
+      {/* Imagem e Destaques do Jogador do Dia (Quando votação encerrada) */}
+      {match.status === "FINISHED" && (
+        <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b-2 border-moss/20 pb-2">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Pós-Jogo</span>
+              <h2 className="font-serif text-2xl">Destaques da Rodada</h2>
+            </div>
+            <a
+              href={`/api/partida/${match.id}/destaques`}
+              target="_blank"
+              download={`craque-da-rodada-${match.id}.png`}
+              className="inline-flex items-center gap-1 border-2 border-moss bg-moss text-paper px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-moss-soft"
+            >
+              Baixar Imagem ↗
+            </a>
+          </div>
+
+          <div className="overflow-hidden border-2 border-moss shadow-hard-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/partida/${match.id}/destaques`}
+              alt="Jogador do Dia e Top 5 da partida"
+              className="w-full h-auto object-cover"
+              loading="lazy"
+            />
+          </div>
+
+          <p className="text-[11px] text-moss-soft text-center italic">
+            Apenas o Top 5 é revelado publicamente. O restante das avaliações é restrito ao organizador.
+          </p>
+        </section>
       )}
 
       {/* Confirmação de presença */}
@@ -134,14 +168,6 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
         </h2>
         {match.status === "OPEN" ? <PreDrawList match={match} /> : <TeamsBoard match={match} />}
       </section>
-
-      {/* Placares */}
-      {match.status !== "OPEN" && (
-        <section className="flex flex-col gap-3">
-          <h2 className="font-serif text-2xl">Placares dos Jogos</h2>
-          <Scoreboard match={match} />
-        </section>
-      )}
     </div>
   );
 }

@@ -8,17 +8,17 @@ export const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   FINISHED: { label: "Encerrada", cls: "stamp-done" },
 };
 
-export function GloveBadge({ className }: { className?: string }) {
+export function GloveBadge({ className, showLabel = false }: { className?: string; showLabel?: boolean }) {
   return (
     <span
       className={cn(
-        "relative flex size-6 shrink-0 items-center justify-center border-2 border-moss bg-brick text-paper",
+        "inline-flex items-center gap-1 bg-amber-500/15 text-amber-900 border border-amber-600/40 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase shrink-0 shadow-xs",
         className,
       )}
-      aria-hidden="true"
+      title="Goleiro"
     >
-      <Hand className="size-3.5" strokeWidth={2.5} />
-      <span className="absolute inset-x-0 bottom-0 h-1 border-t-2 border-moss bg-paper" />
+      <Hand className="size-3.5 fill-amber-500/40 text-amber-700" strokeWidth={2.5} aria-hidden="true" />
+      <span>GL</span>
     </span>
   );
 }

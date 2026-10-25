@@ -3,12 +3,40 @@ export type TeamKey = (typeof TEAM_ORDER)[number];
 
 export const TEAM_META: Record<
   TeamKey,
-  { label: string; swatch: string; text: string; hex: string }
+  { label: string; swatch: string; text: string; hex: string; border: string; bgLight: string }
 > = {
-  AZUL: { label: "Azul", swatch: "bg-[#2c4a6e]", text: "text-paper", hex: "#2c4a6e" },
-  VERMELHO: { label: "Vermelho", swatch: "bg-[#9e2a2b]", text: "text-paper", hex: "#9e2a2b" },
-  PRETO: { label: "Preto", swatch: "bg-[#1f1f1f]", text: "text-paper", hex: "#1f1f1f" },
-  AMARELO: { label: "Amarelo", swatch: "bg-[#d9a520]", text: "text-moss", hex: "#d9a520" },
+  AZUL: {
+    label: "Azul",
+    swatch: "bg-blue-600 text-white",
+    text: "text-white",
+    hex: "#2563eb",
+    border: "border-blue-700",
+    bgLight: "bg-blue-50 text-blue-950",
+  },
+  VERMELHO: {
+    label: "Vermelho",
+    swatch: "bg-red-600 text-white",
+    text: "text-white",
+    hex: "#dc2626",
+    border: "border-red-700",
+    bgLight: "bg-red-50 text-red-950",
+  },
+  PRETO: {
+    label: "Preto",
+    swatch: "bg-neutral-900 text-white",
+    text: "text-white",
+    hex: "#171717",
+    border: "border-black",
+    bgLight: "bg-neutral-100 text-neutral-950",
+  },
+  AMARELO: {
+    label: "Amarelo",
+    swatch: "bg-amber-400 text-neutral-950",
+    text: "text-neutral-950",
+    hex: "#facc15",
+    border: "border-amber-500",
+    bgLight: "bg-amber-50 text-amber-950",
+  },
 };
 
 export function teamsFor(numTeams: number): TeamKey[] {

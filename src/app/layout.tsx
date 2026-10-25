@@ -90,10 +90,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 
         <main className="mx-auto w-full max-w-md flex-1 px-4 py-5">{children}</main>
 
-        <footer className="mx-auto w-full max-w-md px-4 pb-6 pt-2 text-center text-xs text-moss-soft">
-          <div className="border-t-2 border-moss/20 pt-3">
-            Tarde Esportiva
-          </div>
+        <footer className="mx-auto w-full max-w-md px-4 pb-8 pt-4 text-center">
+          <p className="border-t border-moss/20 pt-4 font-serif text-[11px] leading-relaxed text-moss/70 italic">
+            &ldquo;Portanto, quer comais, quer bebais ou façais outra coisa qualquer, fazei tudo para a glória de Deus.&rdquo;
+            <span className="block not-italic font-sans text-[10px] uppercase tracking-wider font-semibold text-moss/50 mt-1">
+              1 Coríntios 10:31
+            </span>
+          </p>
         </footer>
       </body>
     </html>

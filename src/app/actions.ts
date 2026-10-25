@@ -55,7 +55,7 @@ export async function submitVotes(
     if (score == null || v.targetId === voterId || !played.has(v.targetId)) continue;
     clean.set(v.targetId, score);
   }
-  if (clean.size === 0) return { ok: false, error: "Dê pelo menos uma nota antes de enviar." };
+  if (clean.size === 0) return { ok: false, error: "Avalie pelo menos um jogador para confirmar seu voto." };
 
   await db.$transaction(
     [...clean].map(([targetId, score]) =>

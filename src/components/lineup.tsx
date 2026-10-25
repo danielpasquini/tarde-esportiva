@@ -1,7 +1,7 @@
 import { byTeams, preDraw, type AttendanceFull, type MatchFull } from "@/lib/match";
 import { TEAM_META, teamsFor, type TeamKey } from "@/lib/teams";
 import { formatRating } from "@/lib/rating";
-import { removeAttendance, setTeam, toggleGoalkeeper, deleteGame } from "@/app/admin/actions";
+import { removeAttendance, setTeam, toggleGoalkeeper } from "@/app/admin/actions";
 import { SubmitButton } from "@/components/client";
 import { Empty, GloveBadge, TeamName } from "@/components/ui";
 
@@ -96,30 +96,31 @@ export function PreDrawList({ match, admin = false }: { match: MatchFull; admin?
 function MoveButtons({ match, att, exclude }: { match: MatchFull; att: AttendanceFull; exclude?: string | null }) {
   const targets = teamsFor(match.numTeams).filter((t) => t !== exclude);
   return (
-    <form action={setTeam.bind(null, match.id, att.id)} className="flex flex-wrap gap-1">
+    <form action={setTeam.bind(null, match.id, att.id)} className="flex items-center gap-1.5 flex-wrap">
+      <span className="text-[10px] font-bold text-moss-soft uppercase mr-0.5">Mudar para:</span>
       {targets.map((t) => (
         <SubmitButton
           key={t}
           name="team"
           value={t}
-          className={`h-7 px-2 text-[10px] font-bold uppercase tracking-wider ${TEAM_META[t].swatch} ${TEAM_META[t].text}`}
+          className={`h-7 px-2.5 rounded text-[11px] font-bold uppercase tracking-wide border shadow-xs ${TEAM_META[t].swatch} ${TEAM_META[t].border} hover:opacity-90 active:scale-95`}
           pendingLabel="…"
-          title={`Mover para ${TEAM_META[t].label}`}
+          title={`Transferir para ${TEAM_META[t].label}`}
         >
-          {exclude ? TEAM_META[t].label.slice(0, 3) : `→ ${TEAM_META[t].label}`}
+          {TEAM_META[t].label}
         </SubmitButton>
       ))}
-      {exclude && (
+      {exclude ? (
         <SubmitButton
           name="team"
           value=""
-          className="h-7 px-2 text-[10px] font-bold uppercase tracking-wider bg-paper-dark text-moss"
+          className="h-7 px-2.5 rounded text-[11px] font-bold uppercase tracking-wide bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 shadow-xs"
           pendingLabel="…"
-          title="Mandar para o banco de reservas"
+          title="Colocar como reserva / desfalque"
         >
           Banco
         </SubmitButton>
-      )}
+      ) : null}
     </form>
   );
 }
@@ -166,32 +167,37 @@ export function TeamsBoard({ match, admin = false }: { match: MatchFull; admin?:
             <div className="p-4 flex flex-col gap-4">
               {/* Goleiro Fixo */}
               <div>
-                <h4 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-brick">
-                  <GloveBadge className="size-4" />
-                  Goleiro
+                <h4 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-moss">
+                  <GloveBadge />
+                  <span>Goleiro</span>
                 </h4>
                 {keeper ? (
-                  <div className="border-2 border-moss bg-paper px-3 py-2 flex items-center justify-between">
-                    <span className="font-semibold text-sm">{keeper.player.name}</span>
-                    {admin && (
-                      <span className="text-xs font-mono text-moss-soft">
-                        ★ {formatRating(keeper.ratingAtDraw ?? keeper.player.baseRating)}
-                      </span>
-                    )}
+                  <div className="border-2 border-moss bg-paper p-3 rounded flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <GloveBadge />
+                        <span className="font-bold text-sm text-moss">{keeper.player.name}</span>
+                      </div>
+                      {admin && (
+                        <span className="text-xs font-mono text-moss-soft">
+                          ★ {formatRating(keeper.ratingAtDraw ?? keeper.player.baseRating)}
+                        </span>
+                      )}
+                    </div>
                     {editable && (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-moss/10 flex-wrap">
                         <MoveButtons match={match} att={keeper} exclude={keeper.team} />
                         <form action={toggleGoalkeeper.bind(null, match.id, keeper.id)}>
-                          <SubmitButton className="h-7 px-2 text-[10px] font-bold uppercase tracking-wider bg-paper-dark">
-                            Para Linha
+                          <SubmitButton className="h-7 px-2 text-[10px] font-bold uppercase tracking-wider bg-paper-dark border border-moss/30 rounded">
+                            Tornar Jogador de Linha
                           </SubmitButton>
                         </form>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <p className="border-2 border-dashed border-brick px-3 py-2 text-xs font-medium text-brick">
-                    Sem goleiro fixo (rodízio).
+                  <p className="border border-dashed border-moss/40 px-3 py-2 text-xs text-moss-soft italic rounded">
+                    Sem goleiro fixo escalado neste time.
                   </p>
                 )}
               </div>
@@ -199,13 +205,12 @@ export function TeamsBoard({ match, admin = false }: { match: MatchFull; admin?:
               {/* Jogadores de Linha */}
               <div>
                 <h4 className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.2em] text-moss">
-                  <span>Jogadores de Linha</span>
-                  <span className="text-moss-soft tabular-nums">{linha.length}</span>
+                  <span>Jogadores ({linha.length})</span>
                 </h4>
                 {linha.length ? (
-                  <ol className="border-2 border-moss divide-y divide-moss/20">
+                  <ol className="border-2 border-moss divide-y divide-moss/20 rounded overflow-hidden">
                     {linha.map((att, i) => (
-                      <li key={att.id} className="flex flex-col gap-1 p-2.5">
+                      <li key={att.id} className="flex flex-col gap-1.5 p-2.5 bg-paper hover:bg-paper-dark/30 transition-colors">
                         <div className="flex items-center gap-2">
                           <span className="w-5 font-serif text-moss-soft text-base tabular-nums">
                             {String(i + 1).padStart(2, "0")}
@@ -218,11 +223,11 @@ export function TeamsBoard({ match, admin = false }: { match: MatchFull; admin?:
                           )}
                         </div>
                         {editable && (
-                          <div className="flex flex-wrap items-center gap-1 pl-7 pt-1">
+                          <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1.5 border-t border-dashed border-moss/15 pl-7">
                             <MoveButtons match={match} att={att} exclude={att.team} />
                             <form action={toggleGoalkeeper.bind(null, match.id, att.id)}>
-                              <SubmitButton className="h-7 px-2 text-[10px] font-bold uppercase tracking-wider bg-paper-dark">
-                                Virar Goleiro
+                              <SubmitButton className="h-7 px-2 text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 rounded hover:bg-amber-100">
+                                Definir como Goleiro
                               </SubmitButton>
                             </form>
                           </div>
@@ -231,7 +236,7 @@ export function TeamsBoard({ match, admin = false }: { match: MatchFull; admin?:
                     ))}
                   </ol>
                 ) : (
-                  <p className="border-2 border-dashed border-moss/40 px-3 py-2 text-xs text-moss-soft">
+                  <p className="border border-dashed border-moss/40 px-3 py-2 text-xs text-moss-soft rounded">
                     Nenhum jogador de linha alocado.
                   </p>
                 )}
@@ -256,7 +261,7 @@ export function TeamsBoard({ match, admin = false }: { match: MatchFull; admin?:
                 <div className="flex items-center gap-2">
                   <span className="w-4 font-serif text-brick">{i + 1}.</span>
                   <span className="flex-1 font-semibold text-sm">{a.player.name}</span>
-                  {a.player.isGoalkeeper && <GloveBadge className="size-4" />}
+                  {a.player.isGoalkeeper && <GloveBadge />}
                 </div>
                 {editable && (
                   <div className="flex flex-wrap items-center gap-1 pl-6 pt-1">
@@ -279,39 +284,5 @@ export function TeamsBoard({ match, admin = false }: { match: MatchFull; admin?:
         )}
       </section>
     </div>
-  );
-}
-
-export function Scoreboard({ match, admin = false }: { match: MatchFull; admin?: boolean }) {
-  if (!match.games.length) return <Empty>Nenhum placar registrado ainda</Empty>;
-  return (
-    <ul className="border-[3px] border-moss bg-paper shadow-hard divide-y-2 divide-moss/20">
-      {match.games.map((g) => (
-        <li key={g.id} className="grid grid-cols-3 items-center p-3 text-center">
-          <div className="text-left font-semibold text-sm">
-            <TeamName team={g.teamA} />
-          </div>
-          <div>
-            <span className="font-serif text-2xl font-bold bg-moss text-paper px-2.5 py-0.5 rounded-sm">
-              {g.scoreA} × {g.scoreB}
-            </span>
-          </div>
-          <div className="flex items-center justify-end gap-2 text-right font-semibold text-sm">
-            <TeamName team={g.teamB} />
-            {admin && match.status !== "FINISHED" && (
-              <form action={deleteGame.bind(null, match.id, g.id)}>
-                <SubmitButton
-                  className="size-6 p-0 border border-moss bg-paper text-brick text-xs shadow-none"
-                  confirm="Apagar este placar?"
-                  title="Apagar placar"
-                >
-                  ✕
-                </SubmitButton>
-              </form>
-            )}
-          </div>
-        </li>
-      ))}
-    </ul>
   );
 }

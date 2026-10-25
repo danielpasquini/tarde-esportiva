@@ -10,7 +10,6 @@ import { formatMatchDate } from "@/lib/format";
 import { teamsFor } from "@/lib/teams";
 import {
   addAttendances,
-  addGame,
   closeVoting,
   deleteMatch,
   drawTeams,
@@ -18,9 +17,86 @@ import {
   reopenList,
   updateMatchConfig,
 } from "@/app/admin/actions";
-import { PreDrawList, Scoreboard, TeamsBoard } from "@/components/lineup";
+import { PreDrawList, TeamsBoard } from "@/components/lineup";
 import { CopyLink, SubmitButton } from "@/components/client";
 import { Loading, StatusStamp, GloveBadge } from "@/components/ui";
+
+async function AdminVotesTable({ matchId }: { matchId: string }) {
+  const [averages, attendances] = await Promise.all([
+    db.vote.groupBy({
+      by: ["targetId"],
+      where: { matchId },
+      _avg: { score: true },
+      _count: { score: true },
+    }),
+    db.attendance.findMany({
+      where: { matchId, team: { not: null } },
+      include: { player: true },
+    }),
+  ]);
+
+  const avgMap = new Map(averages.map((a) => [a.targetId, a._avg.score ?? 0]));
+  const countMap = new Map(averages.map((a) => [a.targetId, a._count.score ?? 0]));
+
+  const list = attendances
+    .map((att) => ({
+      id: att.playerId,
+      name: att.player.name,
+      team: att.team,
+      isGoalkeeper: att.asGoalkeeper || att.player.isGoalkeeper,
+      avg: avgMap.get(att.playerId) ?? 0,
+      count: countMap.get(att.playerId) ?? 0,
+      baseRating: att.player.baseRating,
+    }))
+    .sort((a, b) => b.avg - a.avg || a.name.localeCompare(b.name));
+
+  if (!list.length) {
+    return <p className="text-xs text-moss-soft">Nenhum voto computado para esta partida.</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto border-2 border-moss">
+      <table className="w-full text-left text-xs bg-paper">
+        <thead className="bg-paper-dark border-b-2 border-moss uppercase tracking-wider text-[10px] text-moss-soft">
+          <tr>
+            <th className="p-2.5">#</th>
+            <th className="p-2.5">Atleta</th>
+            <th className="p-2.5 text-center">Colete</th>
+            <th className="p-2.5 text-center">Votos</th>
+            <th className="p-2.5 text-right">Média Partida</th>
+            <th className="p-2.5 text-right">Nota Base Geral</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-moss/20">
+          {list.map((p, idx) => (
+            <tr key={p.id} className={idx < 5 ? "bg-amber-500/5 font-semibold" : ""}>
+              <td className="p-2.5 tabular-nums text-moss-soft">{idx + 1}º</td>
+              <td className="p-2.5">
+                <div className="flex items-center gap-1.5">
+                  <span>{p.name}</span>
+                  {p.isGoalkeeper && <GloveBadge />}
+                  {idx === 0 && (
+                    <span className="text-[9px] bg-amber-500 text-white font-bold px-1 rounded">
+                      CRAQUE
+                    </span>
+                  )}
+                </div>
+              </td>
+              <td className="p-2.5 text-center uppercase text-[10px]">{p.team ?? "–"}</td>
+              <td className="p-2.5 text-center tabular-nums">{p.count}</td>
+              <td className="p-2.5 text-right font-mono font-bold text-moss">
+                {p.avg > 0 ? `★ ${p.avg.toFixed(1).replace(".", ",")}` : "–"}
+              </td>
+              <td className="p-2.5 text-right font-mono text-moss-soft">
+                ★ {p.baseRating.toFixed(1).replace(".", ",")}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
   await connection();
@@ -133,16 +209,56 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
                   <SubmitButton
                     className="w-full bg-brick text-paper hover:bg-brick/90 py-3 text-xs font-bold uppercase tracking-widest shadow-hard-sm"
                     id="fechar-votacao"
-                    confirm="Encerrar partida e computar votos? As notas base dos jogadores serão atualizadas na média histórica e a partida será finalizada."
+                    confirm="Encerrar partida e computar votos? A votação será fechada, as notas serão consolidadas e a imagem do Jogador do Dia será disponibilizada."
                   >
-                    Encerrar Partida e Computar Votos
+                    Encerrar Partida e Gerar Imagem do Craque
                   </SubmitButton>
                 </form>
               )}
             </div>
           )}
+
+          {match.status === "FINISHED" && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between border-b border-moss/20 pb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-moss">Imagem Gerada da Rodada</span>
+                <a
+                  href={`/api/partida/${match.id}/destaques`}
+                  target="_blank"
+                  download={`craque-da-rodada-${match.id}.png`}
+                  className="inline-flex items-center gap-1 border-2 border-moss bg-moss text-paper px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-moss-soft"
+                >
+                  Baixar Imagem ↗
+                </a>
+              </div>
+              <div className="overflow-hidden border-2 border-moss shadow-hard-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/api/partida/${match.id}/destaques`}
+                  alt="Imagem do Jogador do Dia"
+                  className="w-full h-auto object-cover"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </section>
+
+      {/* Relatório Completo de Votos (Visível Somente para o Organizador) */}
+      {match.status === "FINISHED" && (
+        <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-3">
+          <div className="flex items-center justify-between border-b-2 border-moss/20 pb-2">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Área Restrita do Admin</span>
+              <h2 className="font-serif text-xl">Todas as Notas da Partida</h2>
+            </div>
+          </div>
+          <p className="text-xs text-moss-soft">
+            Somente você tem acesso a estas notas detalhadas. Para os jogadores, apenas o Top 5 foi revelado na imagem.
+          </p>
+          <AdminVotesTable matchId={match.id} />
+        </section>
+      )}
 
       {/* Adicionar presenças manualmente */}
       {match.status !== "FINISHED" && unconfirmed.length > 0 && (
@@ -181,66 +297,6 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
           <TeamsBoard match={match} admin />
         )}
       </section>
-
-      {/* Placares dos jogos */}
-      {match.status !== "OPEN" && (
-        <section className="flex flex-col gap-4">
-          <h2 className="font-serif text-2xl">Placares dos Jogos</h2>
-          <Scoreboard match={match} admin />
-
-          {match.status !== "FINISHED" && (
-            <form action={addGame.bind(null, match.id)} className="border-[3px] border-moss bg-paper p-4 shadow-hard flex flex-col gap-3">
-              <h3 className="font-serif text-lg border-b border-moss/20 pb-1">Registrar Placar</h3>
-              <div className="grid grid-cols-5 items-center gap-2">
-                <div className="col-span-2">
-                  <select name="teamA" className="w-full border-2 border-moss bg-paper px-2 py-1.5 text-xs font-bold uppercase text-moss outline-none" defaultValue={validTeams[0]}>
-                    {validTeams.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <input
-                    name="scoreA"
-                    type="number"
-                    min="0"
-                    max="99"
-                    defaultValue="0"
-                    className="w-full border-2 border-moss bg-paper px-2 py-1.5 text-center font-bold text-sm"
-                    required
-                  />
-                </div>
-                <div className="text-center font-serif text-xl font-bold">×</div>
-                <div>
-                  <input
-                    name="scoreB"
-                    type="number"
-                    min="0"
-                    max="99"
-                    defaultValue="0"
-                    className="w-full border-2 border-moss bg-paper px-2 py-1.5 text-center font-bold text-sm"
-                    required
-                  />
-                </div>
-                <div className="col-span-2">
-                  <select name="teamB" className="w-full border-2 border-moss bg-paper px-2 py-1.5 text-xs font-bold uppercase text-moss outline-none" defaultValue={validTeams[1] || validTeams[0]}>
-                    {validTeams.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <SubmitButton className="w-full bg-paper text-moss hover:bg-paper-dark py-2 text-xs font-bold uppercase tracking-wider shadow-hard-sm">
-                Salvar Placar
-              </SubmitButton>
-            </form>
-          )}
-        </section>
-      )}
 
       {/* Configurações e cancelamento */}
       <section className="border-[3px] border-moss bg-paper p-4 shadow-hard">

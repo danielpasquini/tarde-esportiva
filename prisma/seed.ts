@@ -3,14 +3,19 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
-const connectionString =
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+
+const url =
   process.env.POSTGRES_PRISMA_URL ??
   process.env.POSTGRES_URL ??
-  process.env.DATABASE_URL;
+  process.env.DATABASE_URL ??
+  "file:./dev.db";
 
-const pool = connectionString ? new Pool({ connectionString }) : undefined;
-const adapter = pool ? new PrismaPg(pool) : undefined;
-const db = new PrismaClient(adapter ? { adapter } : {});
+const adapter = url.startsWith("file:")
+  ? new PrismaBetterSqlite3({ url })
+  : new PrismaPg(new Pool({ connectionString: url }));
+
+const db = new PrismaClient({ adapter });
 
 async function main() {
   console.log("Iniciando seed do Tarde Esportiva...");

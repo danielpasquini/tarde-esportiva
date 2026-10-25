@@ -70,13 +70,17 @@ export function VoteForm({
       <section className="border-[3px] border-moss bg-paper shadow-hard">
         <div className={`flex items-center justify-between border-b-[3px] border-moss px-4 py-3 ${meta?.swatch} ${meta?.text}`}>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">Etapa 1</span>
-            <h2 className="font-serif text-2xl leading-none">Seus Companheiros</h2>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">Seu Time</span>
+            <h2 className="font-serif text-2xl leading-none">Companheiros de Equipe</h2>
           </div>
           <span className="border-2 border-moss bg-paper px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-moss">
             {meta?.label}
           </span>
         </div>
+
+        <p className="px-4 py-2 text-[11px] text-moss-soft bg-paper-dark border-b border-moss/20">
+          Dê notas para quem você quiser (não é obrigatório avaliar todos).
+        </p>
 
         {teammates.length ? (
           <ul>
