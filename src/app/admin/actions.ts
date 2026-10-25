@@ -121,17 +121,53 @@ export async function createMatch(formData: FormData) {
 export async function updateMatchConfig(matchId: string, formData: FormData) {
   await requireAdmin();
   const match = await db.match.findUnique({ where: { id: matchId } });
-  if (!match || match.status !== "OPEN") return;
+  if (!match) return;
+
   const date = parseLocalDateTime(str(formData, "date"));
-  await db.match.update({
-    where: { id: matchId },
-    data: {
-      ...(date ? { date } : {}),
-      numTeams: intIn(str(formData, "numTeams"), 2, 4, match.numTeams),
-      lineSize: intIn(str(formData, "lineSize"), 3, 11, match.lineSize),
-    },
+  const numTeams = intIn(str(formData, "numTeams"), 2, 4, match.numTeams);
+  const lineSize = intIn(str(formData, "lineSize"), 3, 7, match.lineSize);
+
+  const rawStatus = str(formData, "status");
+  const validStatuses = ["OPEN", "DRAWN", "FINISHED"];
+  const status = validStatuses.includes(rawStatus) ? rawStatus : match.status;
+
+  const votingOpenRaw = str(formData, "votingOpen");
+  const votingOpen = status === "OPEN" ? false : votingOpenRaw === "true";
+
+  const validTeams = teamsFor(numTeams) as string[];
+
+  await db.$transaction(async (tx) => {
+    if (status === "OPEN" && match.status !== "OPEN") {
+      await tx.attendance.updateMany({
+        where: { matchId },
+        data: { team: null, asGoalkeeper: false, ratingAtDraw: null },
+      });
+    } else if (numTeams < match.numTeams) {
+      await tx.attendance.updateMany({
+        where: {
+          matchId,
+          team: { notIn: validTeams },
+        },
+        data: { team: null, asGoalkeeper: false, ratingAtDraw: null },
+      });
+    }
+
+    await tx.match.update({
+      where: { id: matchId },
+      data: {
+        ...(date ? { date } : {}),
+        numTeams,
+        lineSize,
+        status,
+        votingOpen,
+      },
+    });
   });
+
   touch(matchId);
+  revalidatePath("/admin");
+  revalidatePath("/historico");
+  revalidatePath(`/partida/${matchId}`);
 }
 
 export async function deleteMatch(matchId: string) {

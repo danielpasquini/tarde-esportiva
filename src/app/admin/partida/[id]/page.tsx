@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowUpRight, Trash2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { getMatch } from "@/lib/match";
-import { formatMatchDate } from "@/lib/format";
+import { formatMatchDate, formatDateTimeInput } from "@/lib/format";
 import { teamsFor, teamLabel } from "@/lib/teams";
 import {
   addAttendances,
@@ -21,6 +21,7 @@ import {
 } from "@/app/admin/actions";
 import { PreDrawList, TeamsBoard } from "@/components/lineup";
 import { CopyLink, SubmitButton } from "@/components/client";
+import { AttendanceChecklist } from "@/components/attendance-checklist";
 import { Loading, StatusStamp, GloveBadge } from "@/components/ui";
 
 async function AdminVotesTable({ matchId }: { matchId: string }) {
@@ -392,21 +393,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
           <p className="text-xs text-moss-soft">
             Selecione abaixo os atletas presentes para registrar na partida:
           </p>
-          <form action={addAttendances.bind(null, match.id)} className="flex flex-col gap-3">
-            <div className="max-h-52 overflow-y-auto space-y-1 p-2 bg-paper-dark border border-moss/30 rounded-xs">
-              {unconfirmed.map((p) => (
-                <label key={p.id} className="flex items-center gap-2 text-xs p-1.5 hover:bg-paper cursor-pointer transition-colors">
-                  <input type="checkbox" name="playerId" value={p.id} className="size-4 accent-moss" />
-                  <span className="font-semibold">{p.name}</span>
-                  {p.isGoalkeeper && <GloveBadge />}
-                  <span className="text-moss-soft ml-auto font-mono">★ {p.baseRating.toFixed(1)}</span>
-                </label>
-              ))}
-            </div>
-            <SubmitButton className="w-full bg-moss text-paper hover:bg-moss-soft py-2.5 text-xs font-bold uppercase tracking-wider">
-              Confirmar Atletas Selecionados
-            </SubmitButton>
-          </form>
+          <AttendanceChecklist players={unconfirmed} action={addAttendances.bind(null, match.id)} />
 
           {/* Adicionar presenças colando lista numerada */}
           <details className="pt-2 border-t border-moss/20">
@@ -447,44 +434,111 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
         )}
       </section>
 
-      {/* Configurações e cancelamento */}
-      <section className="border-[3px] border-moss bg-paper p-4 shadow-hard">
-        <details>
-          <summary className="text-xs font-bold uppercase tracking-wider text-moss-soft cursor-pointer">
-            Configurações da Partida
+      {/* Configurações da Partida */}
+      <section className="border-[3px] border-moss bg-paper p-5 shadow-hard">
+        <details open className="group">
+          <summary className="text-xs font-bold uppercase tracking-wider text-moss-soft cursor-pointer flex items-center justify-between select-none">
+            <span className="flex items-center gap-2">
+              <span className="font-serif text-lg text-moss">Configurações da Partida</span>
+              <span className="text-[10px] font-normal uppercase tracking-wider text-moss-soft/80">(Editar tudo)</span>
+            </span>
+            <span className="text-xs text-moss group-open:rotate-180 transition-transform">▼</span>
           </summary>
-          {match.status === "OPEN" && (
-            <form action={updateMatchConfig.bind(null, match.id)} className="grid gap-3 mt-3 pt-3 border-t-2 border-moss">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">Times</label>
-                  <select name="numTeams" defaultValue={match.numTeams} className="w-full border-2 border-moss bg-paper px-2 py-1.5 text-xs text-moss outline-none">
-                    <option value="2">2 times</option>
-                    <option value="3">3 times</option>
-                    <option value="4">4 times</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">Linha por Time</label>
-                  <select name="lineSize" defaultValue={match.lineSize} className="w-full border-2 border-moss bg-paper px-2 py-1.5 text-xs text-moss outline-none">
-                    {[4, 5, 6, 7].map((n) => (
-                      <option key={n} value={n}>
-                        {n} na linha
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <SubmitButton className="bg-paper text-moss hover:bg-paper-dark py-1.5 text-xs font-bold uppercase tracking-wider">
-                Atualizar Regras
-              </SubmitButton>
-            </form>
-          )}
 
-          <div className="mt-3 pt-3 border-t border-moss/20">
+          <form action={updateMatchConfig.bind(null, match.id)} className="grid gap-4 mt-4 pt-4 border-t-2 border-moss">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="edit-date" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
+                  Data e Horário
+                </label>
+                <input
+                  id="edit-date"
+                  name="date"
+                  type="datetime-local"
+                  defaultValue={formatDateTimeInput(match.date)}
+                  className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs font-mono text-moss outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-status" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
+                  Status da Partida
+                </label>
+                <select
+                  id="edit-status"
+                  name="status"
+                  defaultValue={match.status}
+                  className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs font-semibold text-moss outline-none"
+                >
+                  <option value="OPEN">Lista Aberta (Pré-sorteio)</option>
+                  <option value="DRAWN">Times Sorteados (Em Andamento)</option>
+                  <option value="FINISHED">Finalizada / Encerrada</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label htmlFor="edit-numTeams" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
+                  Número de Times
+                </label>
+                <select
+                  id="edit-numTeams"
+                  name="numTeams"
+                  defaultValue={match.numTeams}
+                  className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs text-moss outline-none font-semibold"
+                >
+                  <option value="2">2 Times (Azul / Vermelho)</option>
+                  <option value="3">3 Times (+ Preto)</option>
+                  <option value="4">4 Times (+ Amarelo)</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="edit-lineSize" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
+                  Linha por Time
+                </label>
+                <select
+                  id="edit-lineSize"
+                  name="lineSize"
+                  defaultValue={match.lineSize}
+                  className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs text-moss outline-none font-semibold"
+                >
+                  {[3, 4, 5, 6, 7].map((n) => (
+                    <option key={n} value={n}>
+                      {n} na linha
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="edit-votingOpen" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
+                  Urna de Votação
+                </label>
+                <select
+                  id="edit-votingOpen"
+                  name="votingOpen"
+                  defaultValue={match.votingOpen ? "true" : "false"}
+                  className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs text-moss outline-none font-semibold"
+                >
+                  <option value="false">Fechada / Bloqueada</option>
+                  <option value="true">Aberta para Votos</option>
+                </select>
+              </div>
+            </div>
+
+            <SubmitButton className="w-full bg-moss text-paper hover:bg-moss-soft py-2.5 text-xs font-bold uppercase tracking-wider shadow-hard-sm">
+              Salvar Alterações da Partida
+            </SubmitButton>
+          </form>
+
+          <div className="mt-4 pt-3 border-t border-moss/20 flex items-center justify-between">
+            <span className="text-[11px] text-moss-soft font-semibold">Excluir partida</span>
             <form action={deleteMatch.bind(null, match.id)}>
               <SubmitButton
-                className="bg-brick text-paper py-2 text-xs font-bold uppercase tracking-wider"
+                className="bg-paper text-brick hover:bg-brick hover:text-paper border border-brick/40 py-1.5 px-3 text-[11px] font-bold uppercase tracking-wider shadow-none transition-colors"
                 confirm="Tem certeza que deseja apagar esta partida? Todos os dados serão perdidos."
               >
                 Apagar Partida

@@ -9,7 +9,7 @@ async function ErrorNote({ searchParams }: { searchParams: Promise<Record<string
   const sp = await searchParams;
   if (!sp.erro) return null;
   return (
-    <div role="alert" className="border-2 border-brick bg-[#F3DEDA] p-2.5 text-xs text-brick font-bold text-center">
+    <div role="alert" className="border-2 border-brick bg-[#F9EED9] p-2.5 text-xs text-brick font-bold text-center">
       PIN incorreto. Verifique e tente novamente.
     </div>
   );

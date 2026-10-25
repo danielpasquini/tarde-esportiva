@@ -8,7 +8,7 @@
   --color-paper-dark: #e7e1d3;
   --color-moss: #1a2e22;
   --color-moss-soft: #3b5244;
-  --color-brick: #9e2a2b;
+  --color-brick: #b47a16;
 
   --color-team-azul: #2c4a6e;
   --color-team-vermelho: #9e2a2b;
@@ -17,7 +17,7 @@
 
   --shadow-hard: 4px 4px 0 0 #1a2e22;
   --shadow-hard-sm: 2px 2px 0 0 #1a2e22;
-  --shadow-hard-brick: 4px 4px 0 0 #9e2a2b;
+  --shadow-hard-brick: 4px 4px 0 0 #b47a16;
   --shadow-hard-gold: 4px 4px 0 0 #d9a520;
 
   --color-border: #1a2e22;
@@ -33,7 +33,7 @@
   --paper-dark: #e7e1d3;
   --moss: #1a2e22;
   --moss-soft: #3b5244;
-  --brick: #9e2a2b;
+  --brick: #b47a16;
 }
 
 * {
@@ -56,7 +56,7 @@ body {
   box-shadow: 2px 2px 0 0 #1a2e22;
 }
 .shadow-hard-brick {
-  box-shadow: 4px 4px 0 0 #9e2a2b;
+  box-shadow: 4px 4px 0 0 #b47a16;
 }
 
 /* Stamp styles */
@@ -84,8 +84,8 @@ body {
   background: #f4f1ea;
 }
 .stamp-done {
-  color: #9e2a2b;
-  border-color: #9e2a2b;
+  color: #b47a16;
+  border-color: #b47a16;
   background: #f4f1ea;
 }
 

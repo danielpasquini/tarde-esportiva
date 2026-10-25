@@ -66,7 +66,7 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
                 fontWeight: 800,
                 letterSpacing: "0.25em",
                 textTransform: "uppercase",
-                color: "#9E2A2B",
+                color: "#b47a16",
               }}
             >
               Tarde Esportiva • Destaques da Rodada
@@ -103,7 +103,7 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
               backgroundColor: "#1A2E22",
               color: "#F4F1EA",
               padding: "36px 32px",
-              boxShadow: "8px 8px 0 #9E2A2B",
+              boxShadow: "8px 8px 0 #b47a16",
             }}
           >
             <div style={{ display: "flex", flexDirection: "column" }}>
@@ -198,7 +198,7 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
                       style={{
                         fontSize: 20,
                         fontWeight: 900,
-                        color: "#9E2A2B",
+                        color: "#b47a16",
                         width: 24,
                       }}
                     >
@@ -209,7 +209,7 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
                         {p.name}
                       </span>
                       {p.isGoalkeeper && (
-                        <span style={{ fontSize: 10, fontWeight: 800, color: "#9E2A2B" }}>
+                        <span style={{ fontSize: 10, fontWeight: 800, color: "#b47a16" }}>
                           GOLEIRO
                         </span>
                       )}

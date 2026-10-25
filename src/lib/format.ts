@@ -33,3 +33,22 @@ export function parseLocalDateTime(value: string): Date | null {
   const d = new Date(`${value}:00-03:00`);
   return Number.isNaN(d.getTime()) ? null : d;
 }
+
+/** Formata um Date para valor compatível com <input type="datetime-local"> no fuso de Brasília. */
+export function formatDateTimeInput(date: Date): string {
+  const d = new Date(date);
+  const parts = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(d);
+  const map: Record<string, string> = {};
+  for (const part of parts) {
+    map[part.type] = part.value;
+  }
+  return `${map.year}-${map.month}-${map.day}T${map.hour}:${map.minute}`;
+}

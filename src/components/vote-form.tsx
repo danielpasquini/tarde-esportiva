@@ -119,7 +119,7 @@ export function VoteForm({
           className={`border-2 p-3 text-xs font-semibold ${
             message.ok
               ? "border-moss bg-[#E3EADF] text-moss"
-              : "border-brick bg-[#F3DEDA] text-brick"
+              : "border-brick bg-[#F9EED9] text-brick"
           }`}
         >
           {message.text}
