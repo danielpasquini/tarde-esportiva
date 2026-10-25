@@ -10,12 +10,7 @@ function createClient(): PrismaClient {
     process.env.POSTGRES_PRISMA_URL ??
     process.env.POSTGRES_URL ??
     process.env.DATABASE_URL ??
-    "file:./dev.db";
-
-  if (url.startsWith("file:")) {
-    const adapter = new PrismaBetterSqlite3({ url });
-    return new PrismaClient({ adapter });
-  }
+    "postgresql://postgres:postgres@localhost:5432/tarde_esportiva";
 
   const pool = new Pool({ connectionString: url });
   const adapter = new PrismaPg(pool);

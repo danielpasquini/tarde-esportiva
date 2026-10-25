@@ -17,11 +17,12 @@ async function ErrorNote({ searchParams }: { searchParams: Promise<Record<string
 
 export const metadata = { title: "Acesso Organizador" };
 
-export default async function LoginPage({ searchParams }: PageProps<"/admin/entrar">) {
+async function LoginForm({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await connection();
   if (await isAdmin()) {
     redirect("/admin");
   }
+
   return (
     <div className="flex flex-col gap-6">
       <header>
@@ -46,14 +47,20 @@ export default async function LoginPage({ searchParams }: PageProps<"/admin/entr
           />
         </div>
 
-        <Suspense>
-          <ErrorNote searchParams={searchParams} />
-        </Suspense>
+        <ErrorNote searchParams={searchParams} />
 
         <SubmitButton className="w-full bg-moss text-paper hover:bg-moss-soft py-3 text-xs font-bold uppercase tracking-widest shadow-hard-sm" id="entrar-admin">
           Acessar Painel
         </SubmitButton>
       </form>
     </div>
+  );
+}
+
+export default function LoginPage({ searchParams }: PageProps<"/admin/entrar">) {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm searchParams={searchParams} />
+    </Suspense>
   );
 }
