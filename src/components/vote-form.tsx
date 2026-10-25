@@ -15,7 +15,7 @@ function VoteRow({ p, value, onChange }: { p: Person; value: number; onChange: (
         <div className="flex items-center gap-2 min-w-0">
           <TeamDot team={p.team ?? ""} />
           <span className="font-semibold text-sm truncate">{p.name}</span>
-          {p.isGoalkeeper && <GloveBadge className="size-4" />}
+          {p.isGoalkeeper && <GloveBadge />}
         </div>
         <span className="font-serif text-lg font-bold text-moss tabular-nums">
           {value ? value.toFixed(1).replace(".", ",") : "–"}

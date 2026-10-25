@@ -2,19 +2,21 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Trash2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { getMatch } from "@/lib/match";
 import { formatMatchDate } from "@/lib/format";
-import { teamsFor } from "@/lib/teams";
+import { teamsFor, teamLabel } from "@/lib/teams";
 import {
   addAttendances,
+  addAttendancesByText,
   closeVoting,
   deleteMatch,
   drawTeams,
   openVoting,
   reopenList,
+  reorganizeTeams,
   updateMatchConfig,
 } from "@/app/admin/actions";
 import { PreDrawList, TeamsBoard } from "@/components/lineup";
@@ -111,7 +113,92 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
     orderBy: { name: "asc" },
   });
   const unconfirmed = allPlayers.filter((p) => !confirmedIds.has(p.id));
-  const validTeams = teamsFor(match.numTeams);
+  const validTeams = teamsFor(match.numTeams) as string[];
+
+  // Calcular sugestão de reorganização mínima para equilíbrio
+  let reorganizeSuggestion: { text: string; currentDiff: number; newDiff: number } | null = null;
+  if (match.status === "DRAWN") {
+    const linePlayers = match.attendances.filter(
+      (a) => a.team && !a.asGoalkeeper && validTeams.includes(a.team),
+    );
+    if (linePlayers.length >= 2) {
+      const teamStrengths = new Map<string, number>();
+      for (const t of validTeams) {
+        const sum = linePlayers
+          .filter((p) => p.team === t)
+          .reduce((s, p) => s + (p.ratingAtDraw ?? p.player.baseRating), 0);
+        teamStrengths.set(t, sum);
+      }
+      const strengths = Array.from(teamStrengths.values());
+      const currentDiff = Math.max(...strengths) - Math.min(...strengths);
+      let minDiff = currentDiff;
+
+      // Swap entre 2 jogadores
+      let bestSwap: { p1: typeof linePlayers[0]; p2: typeof linePlayers[0]; diff: number } | null = null;
+      for (let i = 0; i < linePlayers.length; i++) {
+        for (let j = i + 1; j < linePlayers.length; j++) {
+          const p1 = linePlayers[i];
+          const p2 = linePlayers[j];
+          if (p1.team === p2.team) continue;
+          const r1 = p1.ratingAtDraw ?? p1.player.baseRating;
+          const r2 = p2.ratingAtDraw ?? p2.player.baseRating;
+          const sim = validTeams.map((t) => {
+            let s = teamStrengths.get(t) ?? 0;
+            if (t === p1.team) s = s - r1 + r2;
+            if (t === p2.team) s = s - r2 + r1;
+            return s;
+          });
+          const diff = Math.max(...sim) - Math.min(...sim);
+          if (diff < minDiff) {
+            minDiff = diff;
+            bestSwap = { p1, p2, diff };
+          }
+        }
+      }
+
+      // Empréstimo direto se desbalanceado em quantidade
+      const counts = validTeams.map((t) => linePlayers.filter((p) => p.team === t).length);
+      const minCount = Math.min(...counts);
+      const maxCount = Math.max(...counts);
+      let bestTransfer: { p: typeof linePlayers[0]; toTeam: string; diff: number } | null = null;
+      if (maxCount - minCount > 0) {
+        for (const p of linePlayers) {
+          const fromTeam = p.team!;
+          if (linePlayers.filter((x) => x.team === fromTeam).length <= minCount) continue;
+          const r = p.ratingAtDraw ?? p.player.baseRating;
+          for (const toTeam of validTeams) {
+            if (toTeam === fromTeam) continue;
+            if (linePlayers.filter((x) => x.team === toTeam).length >= maxCount) continue;
+            const sim = validTeams.map((t) => {
+              let s = teamStrengths.get(t) ?? 0;
+              if (t === fromTeam) s -= r;
+              if (t === toTeam) s += r;
+              return s;
+            });
+            const diff = Math.max(...sim) - Math.min(...sim);
+            if (diff < minDiff) {
+              minDiff = diff;
+              bestTransfer = { p, toTeam, diff };
+            }
+          }
+        }
+      }
+
+      if (bestTransfer) {
+        reorganizeSuggestion = {
+          text: `${bestTransfer.p.player.name} muda do ${teamLabel(bestTransfer.p.team)} para o ${teamLabel(bestTransfer.toTeam)} (equilibra número e força)`,
+          currentDiff,
+          newDiff: bestTransfer.diff,
+        };
+      } else if (bestSwap) {
+        reorganizeSuggestion = {
+          text: `${bestSwap.p1.player.name} vai para o ${teamLabel(bestSwap.p2.team)} e ${bestSwap.p2.player.name} vai para o ${teamLabel(bestSwap.p1.team)}`,
+          currentDiff,
+          newDiff: bestSwap.diff,
+        };
+      }
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -127,23 +214,34 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
           <StatusStamp status={match.status} votingOpen={match.votingOpen} />
         </div>
 
-        <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-moss/20">
-          <Link
-            href={`/partida/${match.id}`}
-            className="inline-flex items-center gap-1 border-2 border-moss bg-paper-dark px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-moss hover:bg-paper"
-            target="_blank"
-          >
-            Página Pública <ArrowUpRight className="size-3.5" />
-          </Link>
-          {match.votingOpen && (
+        <div className="flex flex-wrap items-center justify-between gap-2 mt-4 pt-3 border-t border-moss/20">
+          <div className="flex flex-wrap gap-2">
             <Link
-              href={`/votar/${match.voteToken}`}
-              className="inline-flex items-center gap-1 border-2 border-moss bg-paper px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brick hover:bg-paper-dark"
+              href={`/partida/${match.id}`}
+              className="inline-flex items-center gap-1 border-2 border-moss bg-paper-dark px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-moss hover:bg-paper"
               target="_blank"
             >
-              Cédula de Votação <ArrowUpRight className="size-3.5" />
+              Página Pública <ArrowUpRight className="size-3.5" />
             </Link>
-          )}
+            {match.votingOpen && (
+              <Link
+                href={`/votar/${match.voteToken}`}
+                className="inline-flex items-center gap-1 border-2 border-moss bg-paper px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brick hover:bg-paper-dark"
+                target="_blank"
+              >
+                Cédula de Votação <ArrowUpRight className="size-3.5" />
+              </Link>
+            )}
+          </div>
+          <form action={deleteMatch.bind(null, match.id)}>
+            <SubmitButton
+              className="inline-flex items-center gap-1 border border-brick/40 bg-brick/10 hover:bg-brick hover:text-paper text-brick px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded transition-colors shadow-none"
+              confirm="Excluir esta partida? Os dados e votos relacionados serão apagados e recalculados."
+              title="Excluir partida"
+            >
+              <Trash2 className="size-3.5" /> Excluir Partida
+            </SubmitButton>
+          </form>
         </div>
       </header>
 
@@ -164,15 +262,37 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
               <SubmitButton
                 className="w-full bg-moss text-paper hover:bg-moss-soft py-3 text-xs font-bold uppercase tracking-widest shadow-hard-brick"
                 id="sortear-times"
-                confirm="Sortear times agora? Os jogadores serão distribuídos pelo Snake Draft e goleiros alocados."
+                confirm="Sortear times agora? Os jogadores e goleiros serão distribuídos de forma equilibrada entre as equipes."
               >
-                Sortear Times (Snake Draft)
+                Sortear Times
               </SubmitButton>
             </form>
           )}
 
           {match.status === "DRAWN" && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
+              {/* Sugestão de Reorganização Inteligente */}
+              {reorganizeSuggestion && (
+                <div className="border-2 border-moss bg-paper-dark p-3 text-xs flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold uppercase tracking-wider text-[10px] text-brick">
+                      Equilíbrio Mínimo Sugerido
+                    </span>
+                    <span className="text-[10px] text-moss-soft font-mono">
+                      Dif. forças: {reorganizeSuggestion.currentDiff.toFixed(1)} → {reorganizeSuggestion.newDiff.toFixed(1)}
+                    </span>
+                  </div>
+                  <p className="font-semibold text-moss">
+                    💡 {reorganizeSuggestion.text}
+                  </p>
+                  <form action={reorganizeTeams.bind(null, match.id)}>
+                    <SubmitButton className="w-full bg-moss text-paper hover:bg-moss-soft py-2 text-xs font-bold uppercase tracking-wider shadow-hard-sm">
+                      Reorganizar
+                    </SubmitButton>
+                  </form>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-2">
                 <form action={drawTeams.bind(null, match.id)}>
                   <SubmitButton
@@ -278,7 +398,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
                 <label key={p.id} className="flex items-center gap-2 text-xs p-1.5 hover:bg-paper cursor-pointer transition-colors">
                   <input type="checkbox" name="playerId" value={p.id} className="size-4 accent-moss" />
                   <span className="font-semibold">{p.name}</span>
-                  {p.isGoalkeeper && <GloveBadge className="size-3.5" />}
+                  {p.isGoalkeeper && <GloveBadge />}
                   <span className="text-moss-soft ml-auto font-mono">★ {p.baseRating.toFixed(1)}</span>
                 </label>
               ))}
@@ -287,6 +407,31 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
               Confirmar Atletas Selecionados
             </SubmitButton>
           </form>
+
+          {/* Adicionar presenças colando lista numerada */}
+          <details className="pt-2 border-t border-moss/20">
+            <summary className="text-xs font-bold uppercase tracking-wider text-brick cursor-pointer underline">
+              + Colar Lista Numerada (Adicionar presenças via texto)
+            </summary>
+            <form action={addAttendancesByText.bind(null, match.id)} className="flex flex-col gap-3 mt-3">
+              <div>
+                <label htmlFor="batch-attendance-names" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
+                  Cole a lista da partida (ex: 1. Paulo Ricardo, 2. Tuguinho...)
+                </label>
+                <textarea
+                  id="batch-attendance-names"
+                  name="names"
+                  rows={5}
+                  className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs font-mono text-moss outline-none"
+                  placeholder={`1. Paulo Ricardo\n2. Tuguinho\n3. Ricardo...`}
+                  required
+                />
+              </div>
+              <SubmitButton className="w-full bg-paper-dark text-moss hover:bg-paper py-2 text-xs font-bold uppercase tracking-wider border-2 border-moss shadow-hard-sm">
+                Processar e Incluir na Partida
+              </SubmitButton>
+            </form>
+          </details>
         </section>
       )}
 
@@ -322,7 +467,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">Linha por Time</label>
                   <select name="lineSize" defaultValue={match.lineSize} className="w-full border-2 border-moss bg-paper px-2 py-1.5 text-xs text-moss outline-none">
-                    {[4, 5, 6, 7, 8, 9, 10].map((n) => (
+                    {[4, 5, 6, 7].map((n) => (
                       <option key={n} value={n}>
                         {n} na linha
                       </option>

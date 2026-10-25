@@ -20,33 +20,58 @@ const db = new PrismaClient({ adapter });
 async function main() {
   console.log("Iniciando seed do Tarde Esportiva...");
 
-  // Criar jogadores clássicos com notas 1 a 5 (meias estrelas)
-  const players = [
-    { name: "Zico", isGoalkeeper: false, baseRating: 5.0 },
-    { name: "Sócrates", isGoalkeeper: false, baseRating: 4.5 },
-    { name: "Falcão", isGoalkeeper: false, baseRating: 4.5 },
-    { name: "Rivelino", isGoalkeeper: false, baseRating: 4.5 },
-    { name: "Júnior", isGoalkeeper: false, baseRating: 4.0 },
-    { name: "Toninho Cerezo", isGoalkeeper: false, baseRating: 4.0 },
-    { name: "Éder Aleixo", isGoalkeeper: false, baseRating: 4.0 },
-    { name: "Cláudio Adão", isGoalkeeper: false, baseRating: 3.5 },
-    { name: "Careca", isGoalkeeper: false, baseRating: 4.0 },
-    { name: "Reinaldo", isGoalkeeper: false, baseRating: 3.5 },
-    { name: "Nelinho", isGoalkeeper: false, baseRating: 3.5 },
-    { name: "Leandro", isGoalkeeper: false, baseRating: 4.0 },
-    { name: "Batista", isGoalkeeper: false, baseRating: 3.0 },
-    { name: "Dirceu", isGoalkeeper: false, baseRating: 3.5 },
-    { name: "Serginho Chulapa", isGoalkeeper: false, baseRating: 3.0 },
-    { name: "Waldir Peres", isGoalkeeper: true, baseRating: 3.5 },
-    { name: "Carlos Gallo", isGoalkeeper: true, baseRating: 4.0 },
-    { name: "Emerson Leão", isGoalkeeper: true, baseRating: 4.5 },
-  ];
+  // Lista oficial fornecida pelo organizador
+  const userListText = `
+    1. Paulo Ricardo 
+    2. Tuguinho
+    3. Ricardo
+    4. Reinaldo 
+    5. Claudemir 
+    6. Thailyne 
+    7. Caio 
+    8. Guilherme 
+    9. Ge
+    10. Alex
+    11. Victor 
+    12. Rodrigo 
+    13. marcio14.  Godoy
+    15.  Marques 
+    16. Lut
+    17. Jota
+    18. Queslei
+    19. Jhonatan 
+    20. Calebe
+    21. Anezio
+    22. marcelo
+    23. Daniel
+    24. Claudecir
+  `;
 
-  for (const p of players) {
+  // Parse e normalização com deduplicação
+  const rawLines = userListText
+    .replace(/([^\s\d])\s*(\d+[\.\-\)])/g, "$1\n$2")
+    .split(/[\r\n]+/);
+
+  const seen = new Set<string>();
+  const officialPlayers: { name: string; isGoalkeeper: boolean; baseRating: number }[] = [];
+
+  for (const line of rawLines) {
+    const clean = line.replace(/^[\s\d.-]+/, "").trim();
+    if (!clean) continue;
+    const words = clean.split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+    const formatted = words.join(" ");
+    const key = formatted.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      officialPlayers.push({ name: formatted, isGoalkeeper: false, baseRating: 3.5 });
+    }
+  }
+
+  for (const p of officialPlayers) {
     await db.player.upsert({
       where: { name: p.name },
-      create: { ...p, ratedMatches: 3 },
-      update: {},
+      create: { ...p, active: true },
+      update: { active: true },
     });
   }
 

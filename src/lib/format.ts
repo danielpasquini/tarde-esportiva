@@ -1,18 +1,30 @@
 const TZ = "America/Sao_Paulo";
 
 export function formatMatchDate(date: Date) {
-  return new Intl.DateTimeFormat("pt-BR", {
+  const d = new Date(date);
+  const weekday = new Intl.DateTimeFormat("pt-BR", { timeZone: TZ, weekday: "long" }).format(d);
+  const datePart = new Intl.DateTimeFormat("pt-BR", {
     timeZone: TZ,
-    weekday: "long",
     day: "2-digit",
-    month: "long",
+    month: "2-digit",
+    year: "numeric",
+  }).format(d);
+  const timePart = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: TZ,
     hour: "2-digit",
     minute: "2-digit",
-  }).format(date);
+  }).format(d);
+
+  return `${datePart} às ${timePart} (${weekday})`;
 }
 
 export function formatShortDate(date: Date) {
-  return new Intl.DateTimeFormat("pt-BR", { timeZone: TZ, day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: TZ,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
 }
 
 /** Converte o valor de <input type="datetime-local"> (horário de Brasília). */

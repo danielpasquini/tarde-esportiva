@@ -36,7 +36,7 @@ function PreDrawBlock({
                 {String(i + 1).padStart(2, "0")}
               </span>
               <span className="flex-1 font-semibold truncate text-sm">{a.player.name}</span>
-              {a.isGoalkeeper && <GloveBadge className="size-5" />}
+              {a.isGoalkeeper && <GloveBadge />}
               {admin && (
                 <span className="font-mono text-xs text-moss-soft">★ {formatRating(a.rating)}</span>
               )}
@@ -150,9 +150,9 @@ export function TeamsBoard({ match, admin = false }: { match: MatchFull; admin?:
                 <h3 className="font-serif text-3xl leading-none">Time {meta.label}</h3>
               </div>
               <div className="border-2 border-moss bg-paper px-3 py-1 text-center text-moss shadow-hard-sm">
-                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-moss-soft">Média</p>
+                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-moss-soft">Força do Time</p>
                 <p className="font-serif text-2xl leading-none tabular-nums font-bold">
-                  {average.toFixed(1).replace(".", ",")}
+                  {admin ? average.toFixed(1).replace(".", ",") : strength.toFixed(1).replace(".", ",")}
                 </p>
               </div>
             </header>

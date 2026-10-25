@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { ArrowLeft } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
-import { createPlayer, updatePlayer } from "@/app/admin/actions";
+import { createPlayer, deletePlayer, importPlayersBatch, updatePlayer } from "@/app/admin/actions";
 import { SubmitButton } from "@/components/client";
 import { Empty, Loading, GloveBadge } from "@/components/ui";
 
@@ -76,6 +76,37 @@ async function Players() {
             Adicionar Jogador
           </SubmitButton>
         </form>
+
+        {/* Cadastro em Lote (Lista Numerada ou Texto Livre) */}
+        <details className="pt-2 border-t border-moss/20">
+          <summary className="text-xs font-bold uppercase tracking-wider text-brick cursor-pointer underline">
+            + Cadastrar Vários Jogadores (Colar Lista Numerada)
+          </summary>
+          <form action={importPlayersBatch} className="flex flex-col gap-3 mt-3">
+            <div>
+              <label htmlFor="batch-names" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
+                Cole a lista (ex: 1. Paulo Ricardo, 2. Tuguinho...)
+              </label>
+              <textarea
+                id="batch-names"
+                name="names"
+                rows={5}
+                className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs font-mono text-moss outline-none"
+                placeholder={`1. Paulo Ricardo\n2. Tuguinho\n3. Ricardo\n4. Reinaldo...`}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="batch-rating" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
+                Nota Base Inicial para todos
+              </label>
+              <RatingSelect id="batch-rating" defaultValue={3} />
+            </div>
+            <SubmitButton className="w-full bg-paper-dark text-moss hover:bg-paper py-2 text-xs font-bold uppercase tracking-wider border-2 border-moss shadow-hard-sm">
+              Cadastrar Lista em Lote
+            </SubmitButton>
+          </form>
+        </details>
       </section>
 
       {/* Lista de Jogadores Cadastrados */}
@@ -95,7 +126,7 @@ async function Players() {
                   <summary className="flex items-center justify-between p-3.5 cursor-pointer bg-paper hover:bg-paper-dark transition-colors">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-semibold text-sm truncate">{p.name}</span>
-                      {p.isGoalkeeper && <GloveBadge className="size-4" />}
+                      {p.isGoalkeeper && <GloveBadge />}
                       {!p.active && (
                         <span className="border border-moss px-1 text-[9px] font-bold uppercase text-moss-soft">
                           Inativo
@@ -141,10 +172,22 @@ async function Players() {
                     <p className="text-[10px] text-moss-soft">
                       {p.ratedMatches} {p.ratedMatches === 1 ? "partida avaliada" : "partidas avaliadas"}
                     </p>
-                    <SubmitButton className="bg-moss text-paper hover:bg-moss-soft py-2 text-xs font-bold uppercase tracking-wider shadow-hard-sm">
-                      Salvar Alterações
-                    </SubmitButton>
+                    <div className="flex gap-2">
+                      <SubmitButton className="flex-1 bg-moss text-paper hover:bg-moss-soft py-2 text-xs font-bold uppercase tracking-wider shadow-hard-sm">
+                        Salvar Alterações
+                      </SubmitButton>
+                    </div>
                   </form>
+                  <div className="px-4 pb-4 pt-1 bg-paper-dark border-t border-moss/10 flex justify-end">
+                    <form action={deletePlayer.bind(null, p.id)}>
+                      <SubmitButton
+                        className="bg-brick text-paper hover:bg-brick/90 py-1.5 px-3 text-[11px] font-bold uppercase tracking-wider shadow-none"
+                        confirm={`Tem certeza que deseja excluir permanentemente o jogador ${p.name}? Se ele tiver histórico de partidas, os dados relacionados serão afetados.`}
+                      >
+                        Excluir Jogador
+                      </SubmitButton>
+                    </form>
+                  </div>
                 </details>
               </li>
             ))}

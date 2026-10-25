@@ -1,4 +1,7 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { connection } from "next/server";
+import { isAdmin } from "@/lib/auth";
 import { login } from "@/app/admin/actions";
 import { SubmitButton } from "@/components/client";
 
@@ -14,7 +17,11 @@ async function ErrorNote({ searchParams }: { searchParams: Promise<Record<string
 
 export const metadata = { title: "Acesso Organizador" };
 
-export default function LoginPage({ searchParams }: PageProps<"/admin/entrar">) {
+export default async function LoginPage({ searchParams }: PageProps<"/admin/entrar">) {
+  await connection();
+  if (await isAdmin()) {
+    redirect("/admin");
+  }
   return (
     <div className="flex flex-col gap-6">
       <header>

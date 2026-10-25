@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { connection } from "next/server";
-import { ArrowRight, LogOut, Users } from "lucide-react";
+import { ArrowRight, LogOut, Trash2, Users } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { formatMatchDate } from "@/lib/format";
-import { createMatch, logout } from "@/app/admin/actions";
+import { createMatch, deleteMatch, logout } from "@/app/admin/actions";
 import { SubmitButton } from "@/components/client";
 import { Empty, Loading, StatusStamp } from "@/components/ui";
 
@@ -93,7 +93,7 @@ async function Dashboard() {
                 Jogadores na Linha
               </label>
               <select id="lineSize" name="lineSize" className="w-full border-2 border-moss bg-paper px-3 py-2 text-sm text-moss outline-none" defaultValue="5">
-                {[4, 5, 6, 7, 8, 9, 10].map((n) => (
+                {[4, 5, 6, 7].map((n) => (
                   <option key={n} value={n}>
                     {n} por time
                   </option>
@@ -114,21 +114,33 @@ async function Dashboard() {
         {matches.length ? (
           <ul className="flex flex-col gap-3">
             {matches.map((m) => (
-              <li key={m.id}>
-                <Link
-                  href={`/admin/partida/${m.id}`}
-                  className="block border-[3px] border-moss bg-paper p-4 shadow-hard transition-transform active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-                  id={`admin-partida-${m.id}`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="font-serif text-lg leading-tight first-letter:uppercase">{formatMatchDate(m.date)}</span>
-                    <StatusStamp status={m.status} votingOpen={m.votingOpen} />
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-moss/20 flex items-center justify-between text-xs text-moss-soft font-semibold">
-                    <span>{m.numTeams} times × {m.lineSize} na linha</span>
-                    <span>{m._count.attendances} atletas confirmados</span>
-                  </div>
-                </Link>
+              <li key={m.id} className="border-[3px] border-moss bg-paper shadow-hard overflow-hidden">
+                <div className="flex items-center justify-between p-4 hover:bg-paper-dark/40 transition-colors">
+                  <Link
+                    href={`/admin/partida/${m.id}`}
+                    className="flex-1 block"
+                    id={`admin-partida-${m.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-3 pr-2">
+                      <span className="font-serif text-lg leading-tight first-letter:uppercase">{formatMatchDate(m.date)}</span>
+                      <StatusStamp status={m.status} votingOpen={m.votingOpen} />
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-moss/20 flex items-center justify-between text-xs text-moss-soft font-semibold pr-2">
+                      <span>{m.numTeams} times × {m.lineSize} na linha</span>
+                      <span>{m._count.attendances} atletas confirmados</span>
+                    </div>
+                  </Link>
+
+                  <form action={deleteMatch.bind(null, m.id)} className="pl-3 border-l border-moss/20">
+                    <SubmitButton
+                      className="size-8 p-0 flex items-center justify-center border border-moss/30 bg-paper-dark hover:bg-brick hover:text-paper text-brick/80 rounded transition-colors shadow-none text-xs"
+                      confirm="Deseja realmente apagar esta partida?"
+                      title="Apagar partida"
+                    >
+                      <Trash2 className="size-4" />
+                    </SubmitButton>
+                  </form>
+                </div>
               </li>
             ))}
           </ul>
