@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tarde Esportiva
+
+Aplicação para organização e gerenciamento de peladas e eventos esportivos. Bootstrapped com Next.js e Tailwind CSS.
 
 ## Getting Started
 

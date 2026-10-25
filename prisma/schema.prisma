@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Player {
+  id           String       @id @default(cuid())
+  name         String       @unique
+  isGoalkeeper Boolean      @default(false)
+  baseRating   Float        @default(3)
+  ratedMatches Int          @default(0)
+  active       Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  attendances  Attendance[]
+  votesGiven   Vote[]       @relation("voter")
+  votesGot     Vote[]       @relation("target")
+}
+
+model Match {
+  id          String       @id @default(cuid())
+  date        DateTime
+  numTeams    Int          @default(2)
+  lineSize    Int          @default(5)
+  // OPEN -> DRAWN -> FINISHED
+  status      String       @default("OPEN")
+  votingOpen  Boolean      @default(false)
+  voteToken   String       @unique @default(cuid())
+  createdAt   DateTime     @default(now())
+  attendances Attendance[]
+  games       Game[]
+  votes       Vote[]
+}
+
+model Attendance {
+  id            String   @id @default(cuid())
+  matchId       String
+  playerId      String
+  // colete atribuído no sorteio (null = reserva / fora)
+  team          String?
+  asGoalkeeper  Boolean  @default(false)
+  ratingAtDraw  Float?
+  createdAt     DateTime @default(now())
+  match         Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player        Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, playerId])
+}
+
+model Game {
+  id        String   @id @default(cuid())
+  matchId   String
+  teamA     String
+  teamB     String
+  scoreA    Int
+  scoreB    Int
+  createdAt DateTime @default(now())
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  matchId   String
+  voterId   String
+  targetId  String
+  score     Float
+  createdAt DateTime @default(now())
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  voter     Player   @relation("voter", fields: [voterId], references: [id], onDelete: Cascade)
+  target    Player   @relation("target", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, voterId, targetId])
+}
