@@ -6,8 +6,6 @@ import { db } from "@/lib/db";
 import { formatMatchDate } from "@/lib/format";
 import { preDraw } from "@/lib/match";
 import { TEAM_META, teamsFor } from "@/lib/teams";
-import { confirmPresence } from "@/app/actions";
-import { SubmitButton } from "@/components/client";
 import { Loading, StatusStamp } from "@/components/ui";
 
 async function ActiveMatchCard() {
@@ -39,10 +37,6 @@ async function ActiveMatchCard() {
   const { goalkeepers, line, waitlist, capacity } = preDraw(match);
   const totalTitulares = goalkeepers.length + line.length;
   const teams = teamsFor(match.numTeams);
-
-  const confirmedIds = new Set(match.attendances.map((a) => a.playerId));
-  const roster = await db.player.findMany({ where: { active: true }, orderBy: { name: "asc" } });
-  const available = roster.filter((p) => !confirmedIds.has(p.id));
 
   return (
     <div className="flex flex-col gap-6">
@@ -155,33 +149,6 @@ async function ActiveMatchCard() {
           </div>
         </div>
       </section>
-
-      {/* Formulário de Confirmação Rápida */}
-      {match.status !== "FINISHED" && available.length > 0 && (
-        <section className="border-[3px] border-moss bg-paper p-4 shadow-hard">
-          <h3 className="font-serif text-lg mb-2">Confirmar Presença</h3>
-          <form action={confirmPresence.bind(null, match.id)} className="flex gap-2">
-            <select
-              name="playerId"
-              className="flex-1 border-2 border-moss bg-paper px-3 py-2 text-sm text-moss outline-none"
-              required
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Selecione seu nome
-              </option>
-              {available.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} {p.isGoalkeeper ? "(Goleiro)" : ""}
-                </option>
-              ))}
-            </select>
-            <SubmitButton className="bg-moss text-paper hover:bg-moss-soft">
-              Confirmar
-            </SubmitButton>
-          </form>
-        </section>
-      )}
     </div>
   );
 }

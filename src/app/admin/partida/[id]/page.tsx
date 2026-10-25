@@ -260,29 +260,33 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
         </section>
       )}
 
-      {/* Adicionar presenças manualmente */}
+      {/* Adicionar presenças pelo Administrador */}
       {match.status !== "FINISHED" && unconfirmed.length > 0 && (
-        <section className="border-[3px] border-moss bg-paper p-4 shadow-hard">
-          <details>
-            <summary className="font-serif text-lg cursor-pointer">
-              + Confirmar Jogadores Manualmente ({unconfirmed.length})
-            </summary>
-            <form action={addAttendances.bind(null, match.id)} className="flex flex-col gap-3 mt-3 pt-3 border-t-2 border-moss">
-              <div className="max-h-48 overflow-y-auto space-y-1 p-2 bg-paper-dark border border-moss/30">
-                {unconfirmed.map((p) => (
-                  <label key={p.id} className="flex items-center gap-2 text-xs p-1.5 hover:bg-paper cursor-pointer">
-                    <input type="checkbox" name="playerId" value={p.id} className="size-4 accent-moss" />
-                    <span className="font-semibold">{p.name}</span>
-                    {p.isGoalkeeper && <GloveBadge className="size-3.5" />}
-                    <span className="text-moss-soft">★ {p.baseRating.toFixed(1)}</span>
-                  </label>
-                ))}
-              </div>
-              <SubmitButton className="w-full bg-moss text-paper hover:bg-moss-soft py-2 text-xs font-bold uppercase tracking-wider">
-                Confirmar Selecionados
-              </SubmitButton>
-            </form>
-          </details>
+        <section className="border-[3px] border-moss bg-paper p-4 shadow-hard flex flex-col gap-3">
+          <div className="flex items-center justify-between border-b-2 border-moss/20 pb-2">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-moss-soft">Controle de Lista</span>
+              <h2 className="font-serif text-lg">Confirmar Atletas na Partida ({unconfirmed.length} disponíveis)</h2>
+            </div>
+          </div>
+          <p className="text-xs text-moss-soft">
+            Selecione abaixo os atletas presentes para registrar na partida:
+          </p>
+          <form action={addAttendances.bind(null, match.id)} className="flex flex-col gap-3">
+            <div className="max-h-52 overflow-y-auto space-y-1 p-2 bg-paper-dark border border-moss/30 rounded-xs">
+              {unconfirmed.map((p) => (
+                <label key={p.id} className="flex items-center gap-2 text-xs p-1.5 hover:bg-paper cursor-pointer transition-colors">
+                  <input type="checkbox" name="playerId" value={p.id} className="size-4 accent-moss" />
+                  <span className="font-semibold">{p.name}</span>
+                  {p.isGoalkeeper && <GloveBadge className="size-3.5" />}
+                  <span className="text-moss-soft ml-auto font-mono">★ {p.baseRating.toFixed(1)}</span>
+                </label>
+              ))}
+            </div>
+            <SubmitButton className="w-full bg-moss text-paper hover:bg-moss-soft py-2.5 text-xs font-bold uppercase tracking-wider">
+              Confirmar Atletas Selecionados
+            </SubmitButton>
+          </form>
         </section>
       )}
 

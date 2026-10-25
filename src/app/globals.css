@@ -61,16 +61,17 @@ body {
 
 /* Stamp styles */
 .stamp {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-sans);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   font-size: 0.65rem;
-  padding: 0.2rem 0.45rem;
-  border: 2px solid currentColor;
-  border-radius: 2px;
-  transform: rotate(-2deg);
+  padding: 0.25rem 0.55rem;
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
 }
 .stamp-open {
   color: #1a2e22;

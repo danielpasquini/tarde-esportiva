@@ -3,12 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { db } from "@/lib/db";
 import { getMatch } from "@/lib/match";
 import { formatMatchDate } from "@/lib/format";
-import { confirmPresence, cancelPresence } from "@/app/actions";
 import { PreDrawList, TeamsBoard } from "@/components/lineup";
-import { SubmitButton } from "@/components/client";
 import { Loading, StatusStamp } from "@/components/ui";
 
 async function MatchView({ params }: { params: Promise<{ id: string }> }) {
@@ -16,10 +13,6 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const match = await getMatch(id);
   if (!match) notFound();
-
-  const confirmedIds = new Set(match.attendances.map((a) => a.playerId));
-  const roster = await db.player.findMany({ where: { active: true }, orderBy: { name: "asc" } });
-  const available = roster.filter((p) => !confirmedIds.has(p.id));
 
   return (
     <div className="flex flex-col gap-6">
@@ -85,79 +78,6 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
           <p className="text-[11px] text-moss-soft text-center italic">
             Apenas o Top 5 é revelado publicamente. O restante das avaliações é restrito ao organizador.
           </p>
-        </section>
-      )}
-
-      {/* Confirmação de presença */}
-      {match.status !== "FINISHED" && (
-        <section className="border-[3px] border-moss bg-paper p-4 shadow-hard flex flex-col gap-3">
-          <h2 className="font-serif text-xl">Confirmação de Presença</h2>
-          {available.length ? (
-            <form action={confirmPresence.bind(null, match.id)} className="flex gap-2">
-              <label htmlFor="confirm-player" className="sr-only">
-                Seu nome
-              </label>
-              <select
-                id="confirm-player"
-                name="playerId"
-                className="flex-1 border-2 border-moss bg-paper px-3 py-2 text-sm text-moss outline-none"
-                required
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  Selecione seu nome
-                </option>
-                {available.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} {p.isGoalkeeper ? "(Goleiro)" : ""}
-                  </option>
-                ))}
-              </select>
-              <SubmitButton className="bg-moss text-paper hover:bg-moss-soft" id="confirmar-presenca">
-                Confirmar
-              </SubmitButton>
-            </form>
-          ) : (
-            <p className="text-xs text-moss-soft">Todos os jogadores ativos já confirmaram presença.</p>
-          )}
-
-          {match.status === "DRAWN" && (
-            <p className="text-xs text-moss-soft">
-              Times já sorteados: novas confirmações entram no banco de reservas.
-            </p>
-          )}
-
-          {match.status === "OPEN" && match.attendances.length > 0 && (
-            <details className="mt-1">
-              <summary className="text-xs font-bold uppercase tracking-wider text-brick cursor-pointer underline">
-                Desconfirmar Presença
-              </summary>
-              <form action={cancelPresence.bind(null, match.id)} className="flex gap-2 mt-2 pt-2 border-t border-moss/20">
-                <label htmlFor="cancel-player" className="sr-only">
-                  Seu nome
-                </label>
-                <select
-                  id="cancel-player"
-                  name="playerId"
-                  className="flex-1 border-2 border-moss bg-paper px-3 py-2 text-sm text-moss outline-none"
-                  required
-                  defaultValue=""
-                >
-                  <option value="" disabled>
-                    Selecione seu nome
-                  </option>
-                  {match.attendances.map((a) => (
-                    <option key={a.playerId} value={a.playerId}>
-                      {a.player.name}
-                    </option>
-                  ))}
-                </select>
-                <SubmitButton className="bg-brick text-paper" id="desconfirmar-presenca">
-                  Remover
-                </SubmitButton>
-              </form>
-            </details>
-          )}
         </section>
       )}
 

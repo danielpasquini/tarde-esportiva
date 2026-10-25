@@ -33,59 +33,51 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" className={`${dmSerif.variable} ${workSans.variable}`}>
       <body className="antialiased min-h-dvh flex flex-col">
-        {/* Pennant Header inspirado no modelo */}
-        <header className="relative px-4 pt-4 max-w-md mx-auto w-full">
-          <div className="relative drop-shadow-[4px_4px_0_#9E2A2B]">
-            <div
-              className="bg-moss px-6 pt-5 pb-12 text-center text-paper"
-              style={{ clipPath: "polygon(0 0, 100% 0, 100% 75%, 50% 100%, 0 75%)" }}
-            >
-              <div className="mx-auto mb-2 flex items-center justify-center gap-2 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.25em] text-paper/80">
-                <span className="h-px w-5 bg-paper/60" aria-hidden="true" />
-                Futebol Amador
-                <span className="h-px w-5 bg-paper/60" aria-hidden="true" />
+        {/* Header Elegante & Minimalista */}
+        <header className="px-4 pt-5 pb-1 max-w-md mx-auto w-full">
+          <div className="border-[3px] border-moss bg-paper shadow-hard overflow-hidden">
+            {/* Top Brand Banner */}
+            <div className="bg-moss px-5 pt-5 pb-4 text-center text-paper relative">
+              <div className="flex items-center justify-center gap-1.5 text-brick/90 mb-1.5" aria-hidden="true">
+                <Star className="size-2.5 fill-current" />
+                <Star className="size-3.5 fill-current" />
+                <Star className="size-2.5 fill-current" />
               </div>
 
-              <div className="flex items-center justify-center gap-1 text-brick" aria-hidden="true">
-                <Star className="size-3 fill-current" />
-                <Star className="size-4 fill-current" />
-                <Star className="size-3 fill-current" />
-              </div>
-
-              <Link href="/" className="block mt-1">
-                <h1 className="font-serif text-4xl leading-none tracking-wide text-balance">
-                  TARDE
-                  <span className="block text-5xl">ESPORTIVA</span>
+              <Link href="/" className="inline-block group focus:outline-none">
+                <h1 className="font-serif text-3xl tracking-wide group-hover:opacity-90 transition-opacity">
+                  TARDE <span className="font-normal text-paper/95">ESPORTIVA</span>
                 </h1>
               </Link>
 
-              <div className="mx-auto mt-3 h-1 w-20 border-y border-paper/70 bg-brick" aria-hidden="true" />
+              <div className="mx-auto mt-2.5 h-0.5 w-12 bg-brick rounded-full" aria-hidden="true" />
             </div>
-          </div>
 
-          <nav className="mt-3 flex justify-center gap-2 border-[3px] border-moss bg-paper-dark p-1.5 shadow-hard-sm" aria-label="Navegação">
-            <Link
-              href="/"
-              id="nav-inicio"
-              className="flex-1 text-center py-1.5 px-3 text-xs font-bold uppercase tracking-wider text-moss hover:bg-paper transition-colors"
-            >
-              Início
-            </Link>
-            <Link
-              href="/historico"
-              id="nav-historico"
-              className="flex-1 text-center py-1.5 px-3 text-xs font-bold uppercase tracking-wider text-moss hover:bg-paper transition-colors border-x-2 border-moss/30"
-            >
-              Histórico
-            </Link>
-            <Link
-              href="/admin"
-              id="nav-admin"
-              className="flex-1 text-center py-1.5 px-3 text-xs font-bold uppercase tracking-wider text-moss hover:bg-paper transition-colors"
-            >
-              Organizador
-            </Link>
-          </nav>
+            {/* Navigation Bar integrativa */}
+            <nav className="flex items-stretch border-t-[3px] border-moss bg-paper-dark" aria-label="Navegação Principal">
+              <Link
+                href="/"
+                id="nav-inicio"
+                className="flex-1 text-center py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider text-moss hover:bg-paper transition-colors"
+              >
+                Início
+              </Link>
+              <Link
+                href="/historico"
+                id="nav-historico"
+                className="flex-1 text-center py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider text-moss hover:bg-paper transition-colors border-x-2 border-moss/20"
+              >
+                Histórico
+              </Link>
+              <Link
+                href="/admin"
+                id="nav-admin"
+                className="flex-1 text-center py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider text-moss hover:bg-paper transition-colors"
+              >
+                Organizador
+              </Link>
+            </nav>
+          </div>
         </header>
 
         <main className="mx-auto w-full max-w-md flex-1 px-4 py-5">{children}</main>
