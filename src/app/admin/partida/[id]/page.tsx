@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { getMatch } from "@/lib/match";
 import { formatMatchDate, formatDateTimeInput } from "@/lib/format";
-import { teamsFor, teamLabel } from "@/lib/teams";
+import { teamsFor, teamLabel, TEAM_META, type TeamKey } from "@/lib/teams";
 import {
   addAttendances,
   addAttendancesByText,
@@ -16,7 +16,9 @@ import {
   drawTeams,
   openVoting,
   reopenList,
-  reorganizeTeams,
+  microReorganize,
+  togglePlayerUnavailable,
+  applySuggestedFormat,
   updateMatchConfig,
 } from "@/app/admin/actions";
 import { PreDrawList, TeamsBoard } from "@/components/lineup";
@@ -101,6 +103,76 @@ async function AdminVotesTable({ matchId }: { matchId: string }) {
   );
 }
 
+function getFormatSuggestion(match: {
+  numTeams: number;
+  lineSize: number;
+  attendances: { isUnavailable?: boolean; asGoalkeeper?: boolean; player: { isGoalkeeper: boolean } }[];
+}) {
+  const numTeams = match.numTeams;
+  const currentLineSize = match.lineSize;
+  const totalConfirmed = match.attendances.length;
+  const gks = match.attendances.filter((a) => a.player.isGoalkeeper || a.asGoalkeeper).length;
+  const lineAvailable = Math.max(0, totalConfirmed - Math.min(gks, Math.max(numTeams, 2)));
+
+  // Opções possíveis de formato
+  const candidateSizes = [5, 4, 6, 3];
+  let bestSize = currentLineSize;
+  let bestScore = -Infinity;
+
+  for (const size of candidateSizes) {
+    const slotsNeeded = numTeams * size;
+    const deficit = Math.max(0, slotsNeeded - lineAvailable);
+    const surplus = Math.max(0, lineAvailable - slotsNeeded);
+
+    let score = 0;
+    // Peso do formato ideal: 1 goleiro + 5 linha
+    if (size === 5) score += 60;
+    else if (size === 4) score += 20;
+    else if (size === 6) score += 10;
+    else if (size === 3) score += 0;
+
+    // Menos empréstimos necessários
+    score -= deficit * 15;
+    // Aproveitar jogadores disponíveis
+    score -= surplus * 8;
+
+    if (deficit === 0 && surplus <= 1) {
+      score += 25;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestSize = size;
+    }
+  }
+
+  if (bestSize !== currentLineSize) {
+    const slotsNeeded = numTeams * bestSize;
+    let reason = "";
+    if (bestSize === 5) {
+      if (lineAvailable >= slotsNeeded) {
+        reason = `Com ${lineAvailable} jogadores de linha confirmados para ${numTeams} times, o formato ideal (1 goleiro + 5 linha) acomoda todo o elenco de forma limpa, sem necessidade de empréstimos excessivos.`;
+      } else {
+        reason = `O formato ideal do grupo é 1 goleiro + 5 linha. Ele garante a dinâmica ideal de jogo para o número de atletas confirmados.`;
+      }
+    } else if (bestSize === 6 && lineAvailable > numTeams * 5) {
+      reason = `Há muitos atletas disponíveis (${lineAvailable} de linha). Mudar para 1 goleiro + 6 linha permite que todos joguem com menos tempo de espera.`;
+    } else if (bestSize < currentLineSize) {
+      reason = `O formato atual (1+${currentLineSize}) exige muitos empréstimos devido ao número de atletas presentes (${lineAvailable} de linha). Mudar para 1+${bestSize} fecha as equipes de forma mais natural.`;
+    } else {
+      reason = `Com ${lineAvailable} jogadores de linha confirmados, o formato 1 goleiro + ${bestSize} linha otimiza a montagem dos times.`;
+    }
+
+    return {
+      suggestedLineSize: bestSize,
+      isIdeal: bestSize === 5,
+      reason,
+    };
+  }
+
+  return null;
+}
+
 async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   await requireAdmin();
@@ -115,91 +187,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
   });
   const unconfirmed = allPlayers.filter((p) => !confirmedIds.has(p.id));
   const validTeams = teamsFor(match.numTeams) as string[];
-
-  // Calcular sugestão de reorganização mínima para equilíbrio
-  let reorganizeSuggestion: { text: string; currentDiff: number; newDiff: number } | null = null;
-  if (match.status === "DRAWN") {
-    const linePlayers = match.attendances.filter(
-      (a) => a.team && !a.asGoalkeeper && validTeams.includes(a.team),
-    );
-    if (linePlayers.length >= 2) {
-      const teamStrengths = new Map<string, number>();
-      for (const t of validTeams) {
-        const sum = linePlayers
-          .filter((p) => p.team === t)
-          .reduce((s, p) => s + (p.ratingAtDraw ?? p.player.baseRating), 0);
-        teamStrengths.set(t, sum);
-      }
-      const strengths = Array.from(teamStrengths.values());
-      const currentDiff = Math.max(...strengths) - Math.min(...strengths);
-      let minDiff = currentDiff;
-
-      // Swap entre 2 jogadores
-      let bestSwap: { p1: typeof linePlayers[0]; p2: typeof linePlayers[0]; diff: number } | null = null;
-      for (let i = 0; i < linePlayers.length; i++) {
-        for (let j = i + 1; j < linePlayers.length; j++) {
-          const p1 = linePlayers[i];
-          const p2 = linePlayers[j];
-          if (p1.team === p2.team) continue;
-          const r1 = p1.ratingAtDraw ?? p1.player.baseRating;
-          const r2 = p2.ratingAtDraw ?? p2.player.baseRating;
-          const sim = validTeams.map((t) => {
-            let s = teamStrengths.get(t) ?? 0;
-            if (t === p1.team) s = s - r1 + r2;
-            if (t === p2.team) s = s - r2 + r1;
-            return s;
-          });
-          const diff = Math.max(...sim) - Math.min(...sim);
-          if (diff < minDiff) {
-            minDiff = diff;
-            bestSwap = { p1, p2, diff };
-          }
-        }
-      }
-
-      // Empréstimo direto se desbalanceado em quantidade
-      const counts = validTeams.map((t) => linePlayers.filter((p) => p.team === t).length);
-      const minCount = Math.min(...counts);
-      const maxCount = Math.max(...counts);
-      let bestTransfer: { p: typeof linePlayers[0]; toTeam: string; diff: number } | null = null;
-      if (maxCount - minCount > 0) {
-        for (const p of linePlayers) {
-          const fromTeam = p.team!;
-          if (linePlayers.filter((x) => x.team === fromTeam).length <= minCount) continue;
-          const r = p.ratingAtDraw ?? p.player.baseRating;
-          for (const toTeam of validTeams) {
-            if (toTeam === fromTeam) continue;
-            if (linePlayers.filter((x) => x.team === toTeam).length >= maxCount) continue;
-            const sim = validTeams.map((t) => {
-              let s = teamStrengths.get(t) ?? 0;
-              if (t === fromTeam) s -= r;
-              if (t === toTeam) s += r;
-              return s;
-            });
-            const diff = Math.max(...sim) - Math.min(...sim);
-            if (diff < minDiff) {
-              minDiff = diff;
-              bestTransfer = { p, toTeam, diff };
-            }
-          }
-        }
-      }
-
-      if (bestTransfer) {
-        reorganizeSuggestion = {
-          text: `${bestTransfer.p.player.name} muda do ${teamLabel(bestTransfer.p.team)} para o ${teamLabel(bestTransfer.toTeam)} (equilibra número e força)`,
-          currentDiff,
-          newDiff: bestTransfer.diff,
-        };
-      } else if (bestSwap) {
-        reorganizeSuggestion = {
-          text: `${bestSwap.p1.player.name} vai para o ${teamLabel(bestSwap.p2.team)} e ${bestSwap.p2.player.name} vai para o ${teamLabel(bestSwap.p1.team)}`,
-          currentDiff,
-          newDiff: bestSwap.diff,
-        };
-      }
-    }
-  }
+  const formatSuggestion = getFormatSuggestion(match);
 
   return (
     <div className="flex flex-col gap-6">
@@ -211,6 +199,12 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
           <div>
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-moss-soft">Partida</span>
             <h1 className="font-serif text-3xl first-letter:uppercase leading-tight">{formatMatchDate(match.date)}</h1>
+            {(match.location || match.cost != null) && (
+              <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-moss font-semibold">
+                {match.location && <span>📍 {match.location}</span>}
+                {match.cost != null && <span>💰 R$ {match.cost.toFixed(2).replace(".", ",")} por atleta</span>}
+              </div>
+            )}
           </div>
           <StatusStamp status={match.status} votingOpen={match.votingOpen} />
         </div>
@@ -246,6 +240,39 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </header>
 
+      {/* Sugestão Inteligente de Formato (Goleiro + Linha) */}
+      {formatSuggestion && match.status !== "FINISHED" && (
+        <section className="border-[3px] border-moss bg-amber-500/15 p-4 shadow-hard flex flex-col gap-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">💡</span>
+              <h3 className="font-serif text-base sm:text-lg font-bold text-moss">
+                Sugestão de Formato: {formatSuggestion.isIdeal ? "1 Goleiro + 5 Linha (Ideal do Grupo)" : `1 Goleiro + ${formatSuggestion.suggestedLineSize} Linha`}
+              </h3>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-moss text-paper px-2 py-0.5 rounded">
+              Otimização
+            </span>
+          </div>
+
+          <p className="text-xs text-moss font-medium">
+            {formatSuggestion.reason}
+          </p>
+
+          <div className="flex items-center justify-between pt-2 border-t border-moss/20 flex-wrap gap-2">
+            <span className="text-[11px] text-moss-soft">
+              Formato Atual: <strong>1+{match.lineSize}</strong> → Sugerido: <strong>1+{formatSuggestion.suggestedLineSize}</strong>
+            </span>
+            <form action={applySuggestedFormat.bind(null, match.id)}>
+              <input type="hidden" name="lineSize" value={formatSuggestion.suggestedLineSize} />
+              <SubmitButton className="bg-moss text-paper hover:bg-moss-soft py-1.5 px-3.5 text-xs font-bold uppercase tracking-wider shadow-hard-sm">
+                Aplicar Formato {formatSuggestion.suggestedLineSize === 5 ? "1+5 (Ideal)" : `1+${formatSuggestion.suggestedLineSize}`}
+              </SubmitButton>
+            </form>
+          </div>
+        </section>
+      )}
+
       {/* Compartilhar link de votação */}
       {match.votingOpen && (
         <section className="border-[3px] border-moss bg-paper p-4 shadow-hard">
@@ -272,28 +299,6 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
 
           {match.status === "DRAWN" && (
             <div className="flex flex-col gap-3">
-              {/* Sugestão de Reorganização Inteligente */}
-              {reorganizeSuggestion && (
-                <div className="border-2 border-moss bg-paper-dark p-3 text-xs flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold uppercase tracking-wider text-[10px] text-brick">
-                      Equilíbrio Mínimo Sugerido
-                    </span>
-                    <span className="text-[10px] text-moss-soft font-mono">
-                      Dif. forças: {reorganizeSuggestion.currentDiff.toFixed(1)} → {reorganizeSuggestion.newDiff.toFixed(1)}
-                    </span>
-                  </div>
-                  <p className="font-semibold text-moss">
-                    💡 {reorganizeSuggestion.text}
-                  </p>
-                  <form action={reorganizeTeams.bind(null, match.id)}>
-                    <SubmitButton className="w-full bg-moss text-paper hover:bg-moss-soft py-2 text-xs font-bold uppercase tracking-wider shadow-hard-sm">
-                      Reorganizar
-                    </SubmitButton>
-                  </form>
-                </div>
-              )}
-
               <div className="grid grid-cols-2 gap-2">
                 <form action={drawTeams.bind(null, match.id)}>
                   <SubmitButton
@@ -422,6 +427,82 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
         </section>
       )}
 
+      {/* Card: Jogadores Indisponíveis (Atraso / Lesão) e Microreorganização */}
+      {match.status === "DRAWN" && (
+        <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b-2 border-moss/20 pb-2">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">
+                Gestão de Desfalques & Imprevistos
+              </span>
+              <h2 className="font-serif text-xl">Jogadores Indisponíveis (Atraso / Lesão)</h2>
+            </div>
+            <span className="text-xs font-mono font-bold text-moss-soft">
+              {match.attendances.filter((a) => a.isUnavailable).length} desfalque(s)
+            </span>
+          </div>
+
+          <p className="text-xs text-moss-soft">
+            Selecione atletas que tiveram imprevisto (atraso ou lesão). O sistema fará a <strong>microreorganização balanceada pegando atletas emprestados</strong> de outras equipes para completar o time sem criar bancos.
+          </p>
+
+          <div className="border-2 border-moss bg-paper divide-y divide-moss/20 max-h-72 overflow-y-auto">
+            {match.attendances
+              .filter((a) => a.team)
+              .map((att) => (
+                <div
+                  key={att.id}
+                  className={`flex items-center justify-between p-2.5 text-xs transition-colors ${
+                    att.isUnavailable ? "bg-brick/10" : "hover:bg-paper-dark/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border ${
+                        TEAM_META[att.team as TeamKey]?.swatch ?? ""
+                      }`}
+                    >
+                      {TEAM_META[att.team as TeamKey]?.label ?? att.team}
+                    </span>
+                    <span className={`font-semibold ${att.isUnavailable ? "line-through text-brick" : ""}`}>
+                      {att.player.name}
+                    </span>
+                    {(att.asGoalkeeper || att.player.isGoalkeeper) && <GloveBadge />}
+                    {att.isUnavailable && (
+                      <span className="text-[9px] font-bold text-brick bg-paper px-1.5 py-0.5 border border-brick uppercase">
+                        {att.unavailableReason || "Indisponível"}
+                      </span>
+                    )}
+                    {att.borrowedToTeam && (
+                      <span className="text-[9px] font-bold text-amber-950 bg-amber-200 border border-amber-400 px-1.5 py-0.5 rounded uppercase">
+                        🔄 Empresta para {TEAM_META[att.borrowedToTeam as TeamKey]?.label ?? att.borrowedToTeam}
+                      </span>
+                    )}
+                  </div>
+
+                  <form action={togglePlayerUnavailable.bind(null, match.id, att.id, "Atraso/Lesão")}>
+                    <SubmitButton
+                      className={`h-7 px-2.5 text-[10px] font-bold uppercase tracking-wider rounded border shadow-none ${
+                        att.isUnavailable
+                          ? "bg-paper text-moss border-moss hover:bg-paper-dark"
+                          : "bg-brick/10 text-brick border-brick/40 hover:bg-brick hover:text-paper"
+                      }`}
+                    >
+                      {att.isUnavailable ? "✓ Restaurar Atleta" : "⚠️ Marcar Indisponível"}
+                    </SubmitButton>
+                  </form>
+                </div>
+              ))}
+          </div>
+
+          <form action={microReorganize.bind(null, match.id)}>
+            <SubmitButton className="w-full bg-moss text-paper hover:bg-moss-soft py-3 text-xs font-bold uppercase tracking-wider shadow-hard-sm">
+              ⚡ Executar Microreorganização Balanceada (com Jogador Emprestado)
+            </SubmitButton>
+          </form>
+        </section>
+      )}
+
       {/* Escalação e Remanejamento */}
       <section className="flex flex-col gap-4">
         <h2 className="font-serif text-2xl">
@@ -447,7 +528,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
 
           <form action={updateMatchConfig.bind(null, match.id)} className="grid gap-4 mt-4 pt-4 border-t-2 border-moss">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
+              <div className="min-w-0">
                 <label htmlFor="edit-date" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
                   Data e Horário
                 </label>
@@ -456,7 +537,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
                   name="date"
                   type="datetime-local"
                   defaultValue={formatDateTimeInput(match.date)}
-                  className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs font-mono text-moss outline-none"
+                  className="w-full max-w-full box-border min-w-0 border-2 border-moss bg-paper px-3 py-2 text-xs font-mono text-moss outline-none"
                   required
                 />
               </div>
@@ -471,10 +552,40 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
                   defaultValue={match.status}
                   className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs font-semibold text-moss outline-none"
                 >
-                  <option value="OPEN">Lista Aberta (Pré-sorteio)</option>
-                  <option value="DRAWN">Times Sorteados (Em Andamento)</option>
-                  <option value="FINISHED">Finalizada / Encerrada</option>
+                  <option value="OPEN">📋 Lista Aberta (Pré-sorteio)</option>
+                  <option value="DRAWN">⚽ Times Sorteados (Em Andamento)</option>
+                  <option value="FINISHED">🏁 Finalizada/Encerrada</option>
                 </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="edit-location" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
+                  Local do Jogo (Opcional)
+                </label>
+                <input
+                  id="edit-location"
+                  name="location"
+                  type="text"
+                  defaultValue={match.location ?? ""}
+                  placeholder="Ex: Arena Futebol Clube, Campo 2"
+                  className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs text-moss outline-none"
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-cost" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
+                  Valor por Atleta em R$ (Opcional)
+                </label>
+                <input
+                  id="edit-cost"
+                  name="cost"
+                  type="number"
+                  step="0.50"
+                  defaultValue={match.cost != null ? match.cost.toFixed(2) : ""}
+                  placeholder="Ex: 25,00"
+                  className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs font-mono text-moss outline-none"
+                />
               </div>
             </div>
 
@@ -489,15 +600,15 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
                   defaultValue={match.numTeams}
                   className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs text-moss outline-none font-semibold"
                 >
-                  <option value="2">2 Times (Azul / Vermelho)</option>
-                  <option value="3">3 Times (+ Preto)</option>
-                  <option value="4">4 Times (+ Amarelo)</option>
+                  <option value="2">🟦 🟥 2 Times (Azul/Vermelho)</option>
+                  <option value="3">🟦 🟥 ⬛ 3 Times (Azul/Vermelho/Preto)</option>
+                  <option value="4">🟦 🟥 ⬛ 🟨 4 Times (Azul/Vermelho/Preto/Amarelo)</option>
                 </select>
               </div>
 
               <div>
                 <label htmlFor="edit-lineSize" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
-                  Linha por Time
+                  Formato (Goleiro + Linha)
                 </label>
                 <select
                   id="edit-lineSize"
@@ -505,11 +616,10 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
                   defaultValue={match.lineSize}
                   className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs text-moss outline-none font-semibold"
                 >
-                  {[3, 4, 5, 6, 7].map((n) => (
-                    <option key={n} value={n}>
-                      {n} na linha
-                    </option>
-                  ))}
+                  <option value="3">1 goleiro + 3 linha (4 por time)</option>
+                  <option value="4">1 goleiro + 4 linha (5 por time)</option>
+                  <option value="5">1 goleiro + 5 linha (6 por time - Ideal)</option>
+                  <option value="6">1 goleiro + 6 linha (7 por time)</option>
                 </select>
               </div>
 
@@ -523,8 +633,8 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
                   defaultValue={match.votingOpen ? "true" : "false"}
                   className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs text-moss outline-none font-semibold"
                 >
-                  <option value="false">Fechada / Bloqueada</option>
-                  <option value="true">Aberta para Votos</option>
+                  <option value="false">🔒 Fechada/Bloqueada</option>
+                  <option value="true">🗳️ Aberta para Votos</option>
                 </select>
               </div>
             </div>

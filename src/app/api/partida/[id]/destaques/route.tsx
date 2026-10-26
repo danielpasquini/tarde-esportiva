@@ -96,7 +96,7 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
           {/* Jogador do Dia (MVP) */}
           <div
             style={{
-              flex: 1.2,
+              flex: 1.25,
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
@@ -104,50 +104,79 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
               color: "#F4F1EA",
               padding: "36px 32px",
               boxShadow: "8px 8px 0 #b47a16",
+              border: "3px solid #E5A93C",
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 800,
-                  letterSpacing: "0.3em",
-                  textTransform: "uppercase",
-                  color: "#E5A93C",
-                  marginBottom: 8,
-                }}
-              >
-                ★ Craque da Partida
-              </span>
-              <span
-                style={{
-                  fontSize: 44,
-                  fontWeight: 900,
-                  lineHeight: 1.1,
-                  textTransform: "uppercase",
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {mvp ? mvp.name : "Sem votos"}
-              </span>
-              {mvp?.isGoalkeeper && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
+              <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
                 <span
                   style={{
-                    alignSelf: "flex-start",
-                    backgroundColor: "#E5A93C",
-                    color: "#1A2E22",
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: 800,
-                    padding: "2px 8px",
-                    marginTop: 8,
+                    letterSpacing: "0.3em",
+                    textTransform: "uppercase",
+                    color: "#E5A93C",
+                    marginBottom: 8,
                   }}
                 >
-                  GOLEIRO
+                  ★ Craque do Dia
                 </span>
-              )}
+                <span
+                  style={{
+                    fontSize: 44,
+                    fontWeight: 900,
+                    lineHeight: 1.1,
+                    textTransform: "uppercase",
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  {mvp ? mvp.name : "Sem votos"}
+                </span>
+                {mvp?.isGoalkeeper && (
+                  <span
+                    style={{
+                      alignSelf: "flex-start",
+                      backgroundColor: "#E5A93C",
+                      color: "#1A2E22",
+                      fontSize: 12,
+                      fontWeight: 800,
+                      padding: "2px 8px",
+                      marginTop: 8,
+                    }}
+                  >
+                    GOLEIRO
+                  </span>
+                )}
+              </div>
+
+              {/* Troféu estilizado Pelada Raiz / Tarde Esportiva */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: 16 }}>
+                <svg
+                  width="110"
+                  height="130"
+                  viewBox="0 0 100 120"
+                  style={{ display: "flex" }}
+                >
+                  {/* Base do troféu */}
+                  <path d="M22 106 H78 V116 H22 Z" fill="#E5A93C" />
+                  <path d="M32 92 H68 V106 H32 Z" fill="#b47a16" />
+                  {/* Haste */}
+                  <path d="M43 74 H57 V92 H43 Z" fill="#E5A93C" />
+                  {/* Taça */}
+                  <path d="M20 16 H80 V48 C80 65 67 76 50 76 C33 76 20 65 20 48 Z" fill="#E5A93C" />
+                  {/* Alça esquerda */}
+                  <path d="M10 22 C10 40 20 48 20 48 V38 C20 38 15 34 15 22 H20 V16 H10 Z" fill="#E5A93C" />
+                  {/* Alça direita */}
+                  <path d="M90 22 C90 40 80 48 80 48 V38 C80 38 85 34 85 22 H80 V16 H90 Z" fill="#E5A93C" />
+                  {/* Faixa decorativa interna */}
+                  <path d="M24 24 H76 V28 H24 Z" fill="#b47a16" />
+                  {/* Estrela central */}
+                  <polygon points="50,34 53,43 62,43 55,48 57,57 50,52 43,57 45,48 38,43 47,43" fill="#1A2E22" />
+                </svg>
+              </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginTop: 24 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginTop: 24, borderTop: "2px solid rgba(229, 169, 60, 0.3)", paddingTop: 16 }}>
               <span
                 style={{
                   fontSize: 84,

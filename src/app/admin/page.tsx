@@ -5,6 +5,7 @@ import { ArrowRight, LogOut, Trash2, Users } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { formatMatchDate } from "@/lib/format";
+import { teamsFor, TEAM_META, type TeamKey } from "@/lib/teams";
 import { createMatch, deleteMatch, logout } from "@/app/admin/actions";
 import { SubmitButton } from "@/components/client";
 import { Empty, Loading, StatusStamp } from "@/components/ui";
@@ -63,7 +64,7 @@ async function Dashboard() {
       <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
         <h3 className="font-serif text-xl border-b-2 border-moss/20 pb-2">Marcar Nova Partida</h3>
         <form action={createMatch} className="flex flex-col gap-4">
-          <div>
+          <div className="w-full min-w-0">
             <label htmlFor="date" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
               Data e Horário
             </label>
@@ -71,33 +72,60 @@ async function Dashboard() {
               id="date"
               name="date"
               type="datetime-local"
-              className="w-full border-2 border-moss bg-paper px-3 py-2 text-sm text-moss outline-none"
+              className="w-full max-w-full box-border min-w-0 border-2 border-moss bg-paper px-3 py-2 text-xs font-mono text-moss outline-none"
               defaultValue={defaultDate()}
               required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="location" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
+                Local do Jogo (Opcional)
+              </label>
+              <input
+                id="location"
+                name="location"
+                type="text"
+                placeholder="Ex: Arena Futebol Clube, Campo 2"
+                className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs text-moss outline-none"
+              />
+            </div>
+            <div>
+              <label htmlFor="cost" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
+                Valor por Atleta em R$ (Opcional)
+              </label>
+              <input
+                id="cost"
+                name="cost"
+                type="number"
+                step="0.50"
+                placeholder="Ex: 25,00"
+                className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs font-mono text-moss outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="numTeams" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
                 Número de Times
               </label>
-              <select id="numTeams" name="numTeams" className="w-full border-2 border-moss bg-paper px-3 py-2 text-sm text-moss outline-none" defaultValue="2">
-                <option value="2">2 Times (Azul / Vermelho)</option>
-                <option value="3">3 Times (+ Preto)</option>
-                <option value="4">4 Times (+ Amarelo)</option>
+              <select id="numTeams" name="numTeams" className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs font-semibold text-moss outline-none" defaultValue="2">
+                <option value="2">🟦 🟥 2 Times (Azul/Vermelho)</option>
+                <option value="3">🟦 🟥 ⬛ 3 Times (Azul/Vermelho/Preto)</option>
+                <option value="4">🟦 🟥 ⬛ 🟨 4 Times (Azul/Vermelho/Preto/Amarelo)</option>
               </select>
             </div>
             <div>
               <label htmlFor="lineSize" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
-                Jogadores na Linha
+                Formato de Jogo (Goleiro + Linha)
               </label>
-              <select id="lineSize" name="lineSize" className="w-full border-2 border-moss bg-paper px-3 py-2 text-sm text-moss outline-none" defaultValue="5">
-                {[4, 5, 6, 7].map((n) => (
-                  <option key={n} value={n}>
-                    {n} por time
-                  </option>
-                ))}
+              <select id="lineSize" name="lineSize" className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs font-semibold text-moss outline-none" defaultValue="5">
+                <option value="3">1 goleiro + 3 linha (4 por time)</option>
+                <option value="4">1 goleiro + 4 linha (5 por time)</option>
+                <option value="5">1 goleiro + 5 linha (6 por time - Ideal)</option>
+                <option value="6">1 goleiro + 6 linha (7 por time)</option>
               </select>
             </div>
           </div>
@@ -113,36 +141,58 @@ async function Dashboard() {
         <h3 className="font-serif text-2xl">Todas as Partidas</h3>
         {matches.length ? (
           <ul className="flex flex-col gap-3">
-            {matches.map((m) => (
-              <li key={m.id} className="border-[3px] border-moss bg-paper shadow-hard overflow-hidden">
-                <div className="flex items-center justify-between p-4 hover:bg-paper-dark/40 transition-colors">
-                  <Link
-                    href={`/admin/partida/${m.id}`}
-                    className="flex-1 block"
-                    id={`admin-partida-${m.id}`}
-                  >
-                    <div className="flex items-start justify-between gap-3 pr-2">
-                      <span className="font-serif text-lg leading-tight first-letter:uppercase">{formatMatchDate(m.date)}</span>
-                      <StatusStamp status={m.status} votingOpen={m.votingOpen} />
-                    </div>
-                    <div className="mt-2 pt-2 border-t border-moss/20 flex items-center justify-between text-xs text-moss-soft font-semibold pr-2">
-                      <span>{m.numTeams} times × {m.lineSize} na linha</span>
-                      <span>{m._count.attendances} atletas confirmados</span>
-                    </div>
-                  </Link>
-
-                  <form action={deleteMatch.bind(null, m.id)} className="pl-3 border-l border-moss/20">
-                    <SubmitButton
-                      className="size-8 p-0 flex items-center justify-center border border-moss/30 bg-paper-dark hover:bg-brick hover:text-paper text-brick/80 rounded transition-colors shadow-none text-xs"
-                      confirm="Deseja realmente apagar esta partida?"
-                      title="Apagar partida"
+            {matches.map((m) => {
+              const matchTeams = teamsFor(m.numTeams);
+              return (
+                <li key={m.id} className="border-[3px] border-moss bg-paper shadow-hard overflow-hidden">
+                  <div className="flex items-center justify-between p-4 hover:bg-paper-dark/40 transition-colors">
+                    <Link
+                      href={`/admin/partida/${m.id}`}
+                      className="flex-1 block min-w-0"
+                      id={`admin-partida-${m.id}`}
                     >
-                      <Trash2 className="size-4" />
-                    </SubmitButton>
-                  </form>
-                </div>
-              </li>
-            ))}
+                      <div className="flex items-start justify-between gap-3 pr-2">
+                        <div>
+                          <span className="font-serif text-lg leading-tight first-letter:uppercase block">{formatMatchDate(m.date)}</span>
+                          {(m.location || m.cost != null) && (
+                            <span className="text-[11px] text-moss-soft font-medium flex items-center gap-2 mt-0.5">
+                              {m.location && <span>📍 {m.location}</span>}
+                              {m.cost != null && <span>💰 R$ {m.cost.toFixed(2).replace(".", ",")}</span>}
+                            </span>
+                          )}
+                        </div>
+                        <StatusStamp status={m.status} votingOpen={m.votingOpen} />
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-moss/20 flex items-center justify-between text-xs text-moss-soft font-semibold pr-2 flex-wrap gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="flex items-center gap-1">
+                            {matchTeams.map((t) => (
+                              <span
+                                key={t}
+                                className={`size-2.5 rounded-xs border border-moss/40 ${TEAM_META[t].swatch}`}
+                                title={TEAM_META[t].label}
+                              />
+                            ))}
+                          </span>
+                          <span>{m.numTeams} times × {m.lineSize} na linha</span>
+                        </div>
+                        <span>{m._count.attendances} atletas confirmados</span>
+                      </div>
+                    </Link>
+
+                    <form action={deleteMatch.bind(null, m.id)} className="pl-3 border-l border-moss/20">
+                      <SubmitButton
+                        className="size-8 p-0 flex items-center justify-center border border-moss/30 bg-paper-dark hover:bg-brick hover:text-paper text-brick/80 rounded transition-colors shadow-none text-xs"
+                        confirm="Deseja realmente apagar esta partida?"
+                        title="Apagar partida"
+                      >
+                        <Trash2 className="size-4" />
+                      </SubmitButton>
+                    </form>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <Empty>Nenhuma partida registrada.</Empty>

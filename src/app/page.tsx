@@ -79,6 +79,12 @@ async function ActiveMatchCard() {
               Súmula da Partida
             </h2>
             <p className="text-xs text-moss-soft first-letter:uppercase">{formatMatchDate(match.date)}</p>
+            {(match.location || match.cost != null) && (
+              <p className="text-[11px] text-moss font-semibold mt-0.5 flex items-center gap-2">
+                {match.location && <span>📍 {match.location}</span>}
+                {match.cost != null && <span>💰 R$ {match.cost.toFixed(2).replace(".", ",")}</span>}
+              </p>
+            )}
           </div>
           <StatusStamp status={match.status} votingOpen={match.votingOpen} />
         </div>
@@ -119,13 +125,13 @@ async function ActiveMatchCard() {
           </div>
         </div>
 
-        {/* Lista de espera / Reservas */}
+        {/* Lista de Espera */}
         <div className="p-4">
           <div className="border-2 border-dashed border-brick bg-brick/5 p-3">
             <div className="flex items-baseline justify-between">
               <h3 className="font-serif text-base text-brick">Lista de Espera</h3>
               <span className="text-xs font-semibold uppercase tracking-wider text-brick">
-                {waitlist.length} {waitlist.length === 1 ? "reserva" : "reservas"}
+                {waitlist.length} na espera
               </span>
             </div>
 

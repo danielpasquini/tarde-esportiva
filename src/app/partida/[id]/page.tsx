@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { getMatch } from "@/lib/match";
 import { formatMatchDate } from "@/lib/format";
+import { teamsFor, TEAM_META, type TeamKey } from "@/lib/teams";
 import { PreDrawList, TeamsBoard } from "@/components/lineup";
 import { Loading, StatusStamp } from "@/components/ui";
 
@@ -13,6 +14,8 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const match = await getMatch(id);
   if (!match) notFound();
+
+  const matchTeams = teamsFor(match.numTeams);
 
   return (
     <div className="flex flex-col gap-6">
@@ -24,11 +27,28 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
           <div>
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-moss-soft">Partida</span>
             <h1 className="font-serif text-3xl first-letter:uppercase leading-tight">{formatMatchDate(match.date)}</h1>
+            {(match.location || match.cost != null) && (
+              <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-moss font-semibold">
+                {match.location && <span>📍 {match.location}</span>}
+                {match.cost != null && <span>💰 R$ {match.cost.toFixed(2).replace(".", ",")} por atleta</span>}
+              </div>
+            )}
           </div>
           <StatusStamp status={match.status} votingOpen={match.votingOpen} />
         </div>
-        <div className="mt-3 pt-3 border-t-2 border-moss/20 flex items-center justify-between text-xs text-moss-soft font-semibold">
-          <span>{match.numTeams} times × {match.lineSize} na linha</span>
+        <div className="mt-3 pt-3 border-t-2 border-moss/20 flex items-center justify-between text-xs text-moss-soft font-semibold flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1">
+              {matchTeams.map((t) => (
+                <span
+                  key={t}
+                  className={`size-2.5 rounded-xs border border-moss/40 ${TEAM_META[t].swatch}`}
+                  title={TEAM_META[t].label}
+                />
+              ))}
+            </span>
+            <span>{match.numTeams} times × {match.lineSize} na linha</span>
+          </div>
           <span>{match.attendances.length} atletas confirmados</span>
         </div>
       </header>

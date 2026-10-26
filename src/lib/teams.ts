@@ -48,5 +48,5 @@ export function isTeam(value: unknown): value is TeamKey {
 }
 
 export function teamLabel(team: string | null | undefined) {
-  return isTeam(team) ? TEAM_META[team].label : "Reserva";
+  return isTeam(team) ? TEAM_META[team].label : "Lista de Espera";
 }

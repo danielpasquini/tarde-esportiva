@@ -38,6 +38,11 @@
 
 * {
   -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+input, select, textarea {
+  max-width: 100%;
 }
 
 body {

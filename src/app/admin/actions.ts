@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireAdmin, signIn, signOut } from "@/lib/auth";
 import { getMatch } from "@/lib/match";
-import { splitRoster, snakeDraft } from "@/lib/draw";
+import { splitRoster, snakeDraft, balanceWithBorrows, type Assignment, type Candidate } from "@/lib/draw";
 import { isTeam, teamsFor } from "@/lib/teams";
 import { nextBaseRating, revertBaseRating, normalizeScore } from "@/lib/rating";
 import { parseLocalDateTime } from "@/lib/format";
@@ -106,11 +106,17 @@ export async function deletePlayer(playerId: string) {
 export async function createMatch(formData: FormData) {
   await requireAdmin();
   const date = parseLocalDateTime(str(formData, "date")) ?? new Date();
+  const location = str(formData, "location") || null;
+  const rawCost = str(formData, "cost").replace(",", ".");
+  const cost = rawCost && !Number.isNaN(Number(rawCost)) ? Math.max(0, Number(rawCost)) : null;
+
   const match = await db.match.create({
     data: {
       date,
+      location,
+      cost,
       numTeams: intIn(str(formData, "numTeams"), 2, 4, 2),
-      lineSize: intIn(str(formData, "lineSize"), 3, 11, 5),
+      lineSize: intIn(str(formData, "lineSize"), 3, 6, 5),
     },
   });
   revalidatePath("/admin");
@@ -124,8 +130,12 @@ export async function updateMatchConfig(matchId: string, formData: FormData) {
   if (!match) return;
 
   const date = parseLocalDateTime(str(formData, "date"));
+  const location = str(formData, "location") || null;
+  const rawCost = str(formData, "cost").replace(",", ".");
+  const cost = rawCost && !Number.isNaN(Number(rawCost)) ? Math.max(0, Number(rawCost)) : null;
+
   const numTeams = intIn(str(formData, "numTeams"), 2, 4, match.numTeams);
-  const lineSize = intIn(str(formData, "lineSize"), 3, 7, match.lineSize);
+  const lineSize = intIn(str(formData, "lineSize"), 3, 6, match.lineSize);
 
   const rawStatus = str(formData, "status");
   const validStatuses = ["OPEN", "DRAWN", "FINISHED"];
@@ -140,7 +150,7 @@ export async function updateMatchConfig(matchId: string, formData: FormData) {
     if (status === "OPEN" && match.status !== "OPEN") {
       await tx.attendance.updateMany({
         where: { matchId },
-        data: { team: null, asGoalkeeper: false, ratingAtDraw: null },
+        data: { team: null, asGoalkeeper: false, ratingAtDraw: null, borrowedToTeam: null, borrowedAsGk: false },
       });
     } else if (numTeams < match.numTeams) {
       await tx.attendance.updateMany({
@@ -148,7 +158,7 @@ export async function updateMatchConfig(matchId: string, formData: FormData) {
           matchId,
           team: { notIn: validTeams },
         },
-        data: { team: null, asGoalkeeper: false, ratingAtDraw: null },
+        data: { team: null, asGoalkeeper: false, ratingAtDraw: null, borrowedToTeam: null, borrowedAsGk: false },
       });
     }
 
@@ -156,6 +166,8 @@ export async function updateMatchConfig(matchId: string, formData: FormData) {
       where: { id: matchId },
       data: {
         ...(date ? { date } : {}),
+        location,
+        cost,
         numTeams,
         lineSize,
         status,
@@ -167,6 +179,26 @@ export async function updateMatchConfig(matchId: string, formData: FormData) {
   touch(matchId);
   revalidatePath("/admin");
   revalidatePath("/historico");
+  revalidatePath(`/partida/${matchId}`);
+}
+
+export async function applySuggestedFormat(matchId: string, formData: FormData) {
+  await requireAdmin();
+  const lineSize = intIn(str(formData, "lineSize"), 3, 6, 5);
+  const numTeamsRaw = str(formData, "numTeams");
+  const numTeams = numTeamsRaw ? intIn(numTeamsRaw, 2, 4, 2) : undefined;
+
+  await db.match.update({
+    where: { id: matchId },
+    data: {
+      lineSize,
+      ...(numTeams ? { numTeams } : {}),
+    },
+  });
+
+  touch(matchId);
+  revalidatePath("/admin");
+  revalidatePath("/");
   revalidatePath(`/partida/${matchId}`);
 }
 
@@ -286,17 +318,31 @@ export async function drawTeams(matchId: string) {
   }));
   const ratingOf = new Map(candidates.map((c) => [c.playerId, c.rating]));
   const { goalkeepers, line } = splitRoster(candidates, match.numTeams, match.lineSize);
-  const assignments = snakeDraft(teamsFor(match.numTeams), goalkeepers, line);
+  const assignments = snakeDraft(teamsFor(match.numTeams), goalkeepers, line, match.lineSize);
 
   await db.$transaction([
     db.attendance.updateMany({
       where: { matchId },
-      data: { team: null, asGoalkeeper: false, ratingAtDraw: null },
+      data: {
+        team: null,
+        asGoalkeeper: false,
+        ratingAtDraw: null,
+        borrowedToTeam: null,
+        borrowedAsGk: false,
+        isUnavailable: false,
+        unavailableReason: null,
+      },
     }),
     ...assignments.map((a) =>
       db.attendance.update({
         where: { matchId_playerId: { matchId, playerId: a.playerId } },
-        data: { team: a.team, asGoalkeeper: a.asGoalkeeper, ratingAtDraw: ratingOf.get(a.playerId) },
+        data: {
+          team: a.team,
+          asGoalkeeper: a.asGoalkeeper,
+          ratingAtDraw: ratingOf.get(a.playerId),
+          borrowedToTeam: a.borrowedToTeam ?? null,
+          borrowedAsGk: a.borrowedAsGk ?? false,
+        },
       }),
     ),
     db.match.update({ where: { id: matchId }, data: { status: "DRAWN" } }),
@@ -309,122 +355,95 @@ export async function reopenList(matchId: string) {
   const match = await db.match.findUnique({ where: { id: matchId } });
   if (!match || match.status !== "DRAWN") return;
   await db.$transaction([
-    db.attendance.updateMany({ where: { matchId }, data: { team: null, asGoalkeeper: false, ratingAtDraw: null } }),
+    db.attendance.updateMany({
+      where: { matchId },
+      data: {
+        team: null,
+        asGoalkeeper: false,
+        ratingAtDraw: null,
+        borrowedToTeam: null,
+        borrowedAsGk: false,
+        isUnavailable: false,
+        unavailableReason: null,
+      },
+    }),
     db.match.update({ where: { id: matchId }, data: { status: "OPEN", votingOpen: false } }),
   ]);
   touch(matchId);
 }
 
+/** Marca ou desmarca atleta como indisponível (por atraso ou lesão) */
+export async function togglePlayerUnavailable(matchId: string, attendanceId: string, reason?: string) {
+  await requireAdmin();
+  const att = await db.attendance.findFirst({ where: { id: attendanceId, matchId } });
+  if (!att) return;
+
+  const newUnavailable = !att.isUnavailable;
+  await db.attendance.update({
+    where: { id: att.id },
+    data: {
+      isUnavailable: newUnavailable,
+      unavailableReason: newUnavailable ? (reason || "Atraso/Lesão") : null,
+      // Se indisponível, não pode figurar como emprestado para outro time
+      borrowedToTeam: newUnavailable ? null : att.borrowedToTeam,
+    },
+  });
+  touch(matchId);
+}
+
 /**
- * Reorganiza o equilíbrio entre times com o mínimo de trocas possíveis (empréstimo de jogador).
- * Encontra a menor troca que minimiza a diferença de forças entre os times.
+ * Microreorganização balanceada:
+ * Se houver desfalques (atraso/lesão) ou falta de atletas para o formato da partida (lineSize),
+ * pega emprestado atletas de outras equipes de forma equilibrada pelas notas.
  */
-export async function reorganizeTeams(matchId: string) {
+export async function microReorganize(matchId: string) {
   await requireAdmin();
   const match = await getMatch(matchId);
   if (!match || match.status !== "DRAWN") return;
 
   const validTeams = teamsFor(match.numTeams) as string[];
-  const linePlayers = match.attendances.filter((a) => a.team && !a.asGoalkeeper && validTeams.includes(a.team));
+  const linePlayers = match.attendances.filter(
+    (a) => a.team && !a.asGoalkeeper && validTeams.includes(a.team)
+  );
 
-  if (linePlayers.length < 2) return;
+  const unavailableIds = new Set(
+    match.attendances.filter((a) => a.isUnavailable).map((a) => a.playerId)
+  );
 
-  // Força atual de cada time
-  const teamStrengths = new Map<string, number>();
-  for (const t of validTeams) {
-    const sum = linePlayers
-      .filter((p) => p.team === t)
-      .reduce((s, p) => s + (p.ratingAtDraw ?? p.player.baseRating), 0);
-    teamStrengths.set(t, sum);
-  }
+  const assignments: Assignment[] = linePlayers.map((a) => ({
+    playerId: a.playerId,
+    team: a.team!,
+    asGoalkeeper: false,
+    borrowedToTeam: null,
+  }));
 
-  // Diferença atual máxima - mínima
-  const strengths = Array.from(teamStrengths.values());
-  const currentDiff = Math.max(...strengths) - Math.min(...strengths);
+  const allLineCandidates: Candidate[] = linePlayers.map((a) => ({
+    playerId: a.playerId,
+    rating: a.ratingAtDraw ?? a.player.baseRating,
+    isGoalkeeper: false,
+  }));
 
-  // Cenário 1: Troca 1 por 1 entre dois times (swap)
-  let bestSwap: { p1: typeof linePlayers[0]; p2: typeof linePlayers[0]; newDiff: number } | null = null;
-  let minDiff = currentDiff;
+  balanceWithBorrows(validTeams, assignments, allLineCandidates, match.lineSize, unavailableIds);
 
-  for (let i = 0; i < linePlayers.length; i++) {
-    for (let j = i + 1; j < linePlayers.length; j++) {
-      const p1 = linePlayers[i];
-      const p2 = linePlayers[j];
-      if (p1.team === p2.team) continue;
-
-      const r1 = p1.ratingAtDraw ?? p1.player.baseRating;
-      const r2 = p2.ratingAtDraw ?? p2.player.baseRating;
-
-      const simStrengths = validTeams.map((t) => {
-        let s = teamStrengths.get(t) ?? 0;
-        if (t === p1.team) s = s - r1 + r2;
-        if (t === p2.team) s = s - r2 + r1;
-        return s;
-      });
-
-      const diff = Math.max(...simStrengths) - Math.min(...simStrengths);
-      if (diff < minDiff) {
-        minDiff = diff;
-        bestSwap = { p1, p2, newDiff: diff };
-      }
-    }
-  }
-
-  // Cenário 2: Se os times tiverem número desigual de jogadores de linha, uma transferência direta
-  const counts = validTeams.map((t) => linePlayers.filter((p) => p.team === t).length);
-  const minCount = Math.min(...counts);
-  const maxCount = Math.max(...counts);
-
-  let bestTransfer: { p: typeof linePlayers[0]; toTeam: string; newDiff: number } | null = null;
-  if (maxCount - minCount > 0) {
-    for (const p of linePlayers) {
-      const fromTeam = p.team!;
-      if (linePlayers.filter((x) => x.team === fromTeam).length <= minCount) continue;
-      const r = p.ratingAtDraw ?? p.player.baseRating;
-
-      for (const toTeam of validTeams) {
-        if (toTeam === fromTeam) continue;
-        if (linePlayers.filter((x) => x.team === toTeam).length >= maxCount) continue;
-
-        const simStrengths = validTeams.map((t) => {
-          let s = teamStrengths.get(t) ?? 0;
-          if (t === fromTeam) s -= r;
-          if (t === toTeam) s += r;
-          return s;
-        });
-
-        const diff = Math.max(...simStrengths) - Math.min(...simStrengths);
-        if (diff < minDiff) {
-          minDiff = diff;
-          bestTransfer = { p, toTeam, newDiff: diff };
-        }
-      }
-    }
-  }
-
-  // Aplicar a melhor reorganização mínima encontrada
-  if (bestTransfer) {
-    await db.attendance.update({
-      where: { id: bestTransfer.p.id },
-      data: { team: bestTransfer.toTeam },
-    });
-  } else if (bestSwap) {
-    await db.$transaction([
-      db.attendance.update({
-        where: { id: bestSwap.p1.id },
-        data: { team: bestSwap.p2.team },
-      }),
-      db.attendance.update({
-        where: { id: bestSwap.p2.id },
-        data: { team: bestSwap.p1.team },
-      }),
-    ]);
-  }
+  await db.$transaction([
+    db.attendance.updateMany({
+      where: { matchId },
+      data: { borrowedToTeam: null },
+    }),
+    ...assignments
+      .filter((a) => a.borrowedToTeam)
+      .map((a) =>
+        db.attendance.update({
+          where: { matchId_playerId: { matchId, playerId: a.playerId } },
+          data: { borrowedToTeam: a.borrowedToTeam },
+        })
+      ),
+  ]);
 
   touch(matchId);
 }
 
-/** Troca de colete, promoção de reserva ou envio para o banco. */
+/** Troca de colete de um atleta. */
 export async function setTeam(matchId: string, attendanceId: string, formData: FormData) {
   await requireAdmin();
   const raw = str(formData, "team");
@@ -440,6 +459,7 @@ export async function setTeam(matchId: string, attendanceId: string, formData: F
       team,
       asGoalkeeper: team ? att.asGoalkeeper : false,
       ratingAtDraw: team ? (att.ratingAtDraw ?? att.player.baseRating) : null,
+      borrowedToTeam: team === att.borrowedToTeam ? null : att.borrowedToTeam,
     },
   });
   touch(matchId);

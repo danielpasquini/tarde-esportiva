@@ -25,18 +25,103 @@ export function preDraw(match: MatchFull) {
   return splitRoster(list, match.numTeams, match.lineSize);
 }
 
-/** Depois do sorteio: elenco por colete + banco de reservas. */
+export type TeamRoster = {
+  team: TeamKey;
+  players: AttendanceFull[];
+  keeper: AttendanceFull | null;
+  activeLine: AttendanceFull[];
+  unavailablePlayers: AttendanceFull[];
+  borrowedIn: AttendanceFull[];
+  borrowedOut: AttendanceFull[];
+  strength: number;
+  lineCount: number;
+  restingTeamForGk?: string;
+};
+
+/**
+ * Depois do sorteio: equipes formadas sem reservas/banco,
+ * com suporte à lógica de goleiros fixos de campo (Lado A e Lado B),
+ * jogadores indisponíveis (atraso/lesão) e jogadores emprestados (frisados).
+ */
 export function byTeams(match: MatchFull) {
-  const teams = teamsFor(match.numTeams).map((team: TeamKey) => {
-    const players = match.attendances
-      .filter((a) => a.team === team)
-      .sort((a, b) => Number(b.asGoalkeeper) - Number(a.asGoalkeeper));
-    const line = players.filter((p) => !p.asGoalkeeper);
-    const strength = line.reduce((s, p) => s + (p.ratingAtDraw ?? p.player.baseRating), 0);
-    return { team, players, strength, lineCount: line.length };
+  const validTeams = teamsFor(match.numTeams);
+  const confirmedGoalkeepers = match.attendances.filter(
+    (a) => a.team && (a.asGoalkeeper || a.player.isGoalkeeper)
+  );
+
+  let fixedGkMode: "TWO_FIXED" | "ONE_FIXED" | "NONE" = "NONE";
+  let fieldGkA: AttendanceFull | null = null;
+  let fieldGkB: AttendanceFull | null = null;
+  let singleFixedGk: AttendanceFull | null = null;
+
+  if (confirmedGoalkeepers.length >= 2) {
+    fixedGkMode = "TWO_FIXED";
+    fieldGkA = confirmedGoalkeepers[0];
+    fieldGkB = confirmedGoalkeepers[1];
+  } else if (confirmedGoalkeepers.length === 1) {
+    fixedGkMode = "ONE_FIXED";
+    singleFixedGk = confirmedGoalkeepers[0];
+  }
+
+  const teams: TeamRoster[] = validTeams.map((team: TeamKey) => {
+    const players = match.attendances.filter((a) => a.team === team);
+
+    // Goleiro fixo do time (se houver)
+    const keeper = players.find((p) => p.asGoalkeeper) ?? null;
+
+    // Jogadores de linha deste time
+    const lineAll = players.filter((p) => !p.asGoalkeeper);
+    const unavailablePlayers = lineAll.filter((p) => p.isUnavailable);
+    const activeLine = lineAll.filter((p) => !p.isUnavailable);
+
+    // Atletas emprestados DE OUTROS TIMES para jogar neste time
+    const borrowedIn = match.attendances.filter(
+      (a) => a.team !== team && a.borrowedToTeam === team && !a.isUnavailable
+    );
+
+    // Atletas deste time que jogam emprestados para outro time
+    const borrowedOut = players.filter((a) => a.borrowedToTeam != null && a.borrowedToTeam !== team);
+
+    // Força total da linha (titulares ativos + atletas emprestados)
+    const strength = [...activeLine, ...borrowedIn].reduce(
+      (sum, p) => sum + (p.ratingAtDraw ?? p.player.baseRating),
+      0
+    );
+
+    // Time que descansa para fornecer goleiro quando for ONE_FIXED e este time não tiver goleiro fixo
+    let restingTeamForGk: string | undefined;
+    if (fixedGkMode === "ONE_FIXED" && !keeper) {
+      const otherTeamsWithoutGk = validTeams.filter(
+        (t) => t !== team && t !== singleFixedGk?.team
+      );
+      if (otherTeamsWithoutGk.length > 0) {
+        restingTeamForGk = otherTeamsWithoutGk[0];
+      } else if (singleFixedGk?.team) {
+        restingTeamForGk = singleFixedGk.team;
+      }
+    }
+
+    return {
+      team,
+      players,
+      keeper,
+      activeLine,
+      unavailablePlayers,
+      borrowedIn,
+      borrowedOut,
+      strength,
+      lineCount: activeLine.length + borrowedIn.length,
+      restingTeamForGk,
+    };
   });
-  const bench = match.attendances.filter((a) => !a.team);
-  return { teams, bench };
+
+  return {
+    teams,
+    fixedGkMode,
+    fieldGkA,
+    fieldGkB,
+    singleFixedGk,
+  };
 }
 
 export const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
