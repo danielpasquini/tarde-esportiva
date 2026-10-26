@@ -17,7 +17,7 @@ const workSans = Work_Sans({
 
 export const metadata: Metadata = {
   title: { default: "Tarde Esportiva", template: "%s · Tarde Esportiva" },
-  description: "Organização de partidas de futebol amador: confirmação, sorteio e votação pós-jogo.",
+  description: "Organização de partidas de futebol: confirmação de presença, notas e histórico pós-jogo.",
   applicationName: "Tarde Esportiva",
   appleWebApp: { capable: true, title: "Tarde Esportiva", statusBarStyle: "default" },
 };

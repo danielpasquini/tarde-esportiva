@@ -7,7 +7,7 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
   const match = await db.match.findUnique({
     where: { id },
     include: {
-      attendances: { where: { team: { not: null } }, include: { player: true } },
+      attendances: { include: { player: true } },
     },
   });
 

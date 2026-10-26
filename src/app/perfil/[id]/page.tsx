@@ -8,7 +8,6 @@ import { db } from "@/lib/db";
 import { isAdmin } from "@/lib/auth";
 import { resetPlayerPin } from "@/app/admin/actions";
 import { formatShortDate } from "@/lib/format";
-import { TEAM_META, type TeamKey } from "@/lib/teams";
 import { GloveBadge, Loading } from "@/components/ui";
 import { ProfilePinGate } from "@/components/profile-pin-gate";
 import { ProfilePublicToggle } from "@/components/profile-public-toggle";
@@ -30,7 +29,6 @@ async function Profile({ params }: Props) {
     where: { id },
     include: {
       attendances: {
-        where: { team: { not: null }, isUnavailable: false },
         include: {
           match: true,
         },
@@ -276,8 +274,6 @@ async function Profile({ params }: Props) {
         {matchHistory.length ? (
           <ul className="flex flex-col divide-y-2 divide-moss/20 border-2 border-moss bg-paper">
             {matchHistory.map((m) => {
-              const meta = m.team ? TEAM_META[m.team as TeamKey] : null;
-
               let rankBadge = null;
               if (m.place === 1) {
                 rankBadge = (
@@ -312,12 +308,6 @@ async function Profile({ params }: Props) {
                       <span className="font-bold text-sm text-moss">
                         {formatShortDate(typeof m.date === "string" ? new Date(m.date) : m.date)}
                       </span>
-                      {meta && (
-                        <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-moss bg-moss/10 px-1.5 py-0.5 rounded">
-                          <span className={`size-2.5 rounded-xs border border-moss/40 ${meta.swatch}`} />
-                          Time {meta.label}
-                        </span>
-                      )}
                     </div>
 
                     <div className="flex items-center gap-3">

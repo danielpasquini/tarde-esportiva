@@ -3,17 +3,15 @@
 import { useState, useTransition } from "react";
 import { submitVotes } from "@/app/actions";
 import { StarRating } from "@/components/star-rating";
-import { TEAM_META, isTeam } from "@/lib/teams";
-import { GloveBadge, TeamDot } from "@/components/ui";
+import { GloveBadge } from "@/components/ui";
 
-type Person = { id: string; name: string; team: string | null; isGoalkeeper: boolean };
+export type Person = { id: string; name: string; isGoalkeeper?: boolean };
 
 function VoteRow({ p, value, onChange }: { p: Person; value: number; onChange: (v: number) => void }) {
   return (
     <li className="p-3 border-b-2 border-moss/20 last:border-b-0 flex flex-col gap-2 bg-paper">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
-          <TeamDot team={p.team ?? ""} />
           <span className="font-semibold text-sm truncate">{p.name}</span>
           {p.isGoalkeeper && <GloveBadge />}
         </div>
@@ -33,14 +31,12 @@ function VoteRow({ p, value, onChange }: { p: Person; value: number; onChange: (
 export function VoteForm({
   token,
   voter,
-  teammates,
-  others,
+  targets,
   initial,
 }: {
   token: string;
-  voter: Person;
-  teammates: Person[];
-  others: Person[];
+  voter: { id: string; name: string };
+  targets: Person[];
   initial: Record<string, number>;
 }) {
   const [scores, setScores] = useState<Record<string, number>>(initial);
@@ -49,7 +45,6 @@ export function VoteForm({
 
   const set = (id: string) => (v: number) => setScores((s) => ({ ...s, [id]: v }));
   const rated = Object.values(scores).filter(Boolean).length;
-  const meta = isTeam(voter.team) ? TEAM_META[voter.team] : null;
 
   const send = () =>
     startTransition(async () => {
@@ -66,52 +61,31 @@ export function VoteForm({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Time do jogador (Etapa 1) */}
       <section className="border-[3px] border-moss bg-paper shadow-hard">
-        <div className={`flex items-center justify-between border-b-[3px] border-moss px-4 py-3 ${meta?.swatch} ${meta?.text}`}>
+        <div className="flex items-center justify-between border-b-[3px] border-moss px-4 py-3 bg-paper-dark">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">Seu Time</span>
-            <h2 className="font-serif text-2xl leading-none">Companheiros de Equipe</h2>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Cédula de Votação</span>
+            <h2 className="font-serif text-2xl leading-none">Avaliar Jogadores</h2>
           </div>
           <span className="border-2 border-moss bg-paper px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-moss">
-            {meta?.label}
+            {voter.name}
           </span>
         </div>
 
-        <p className="px-4 py-2 text-[11px] text-moss-soft bg-paper-dark border-b border-moss/20">
-          Dê notas para quem você quiser (não é obrigatório avaliar todos).
+        <p className="px-4 py-2 text-[11px] text-moss-soft bg-paper-dark/50 border-b border-moss/20">
+          Dê uma nota de 1 a 5 estrelas para quem você quiser (não é obrigatório avaliar todos).
         </p>
 
-        {teammates.length ? (
+        {targets.length ? (
           <ul>
-            {teammates.map((p) => (
+            {targets.map((p) => (
               <VoteRow key={p.id} p={p} value={scores[p.id] ?? 0} onChange={set(p.id)} />
             ))}
           </ul>
         ) : (
-          <p className="p-4 text-xs text-moss-soft">Nenhum companheiro de time escalado.</p>
+          <p className="p-4 text-xs text-moss-soft">Nenhum jogador para avaliar.</p>
         )}
       </section>
-
-      {/* Outras equipes (Etapa 2 - Opcional) */}
-      {others.length > 0 && (
-        <details className="border-[3px] border-moss bg-paper shadow-hard">
-          <summary className="p-4 flex items-center justify-between cursor-pointer bg-paper-dark">
-            <div>
-              <span className="font-serif text-lg block">Avaliar Jogadores de Outras Equipes</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-moss-soft">
-                Opcional ({others.length} jogadores)
-              </span>
-            </div>
-            <span className="font-serif text-xl">+</span>
-          </summary>
-          <ul className="border-t-[3px] border-moss">
-            {others.map((p) => (
-              <VoteRow key={p.id} p={p} value={scores[p.id] ?? 0} onChange={set(p.id)} />
-            ))}
-          </ul>
-        </details>
-      )}
 
       {message && (
         <div

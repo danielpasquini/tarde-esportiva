@@ -2,12 +2,10 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
-import { TEAM_META, isTeam, teamsFor } from "@/lib/teams";
 import { VoteForm } from "@/components/vote-form";
 import { VoterSelector } from "@/components/voter-selector";
-import { Loading, TeamDot } from "@/components/ui";
+import { Loading } from "@/components/ui";
 
 async function VoteView({
   params,
@@ -20,20 +18,18 @@ async function VoteView({
   const [{ token }, sp] = await Promise.all([params, searchParams]);
   const match = await db.match.findUnique({
     where: { voteToken: token },
-    include: { attendances: { where: { team: { not: null } }, include: { player: true } } },
+    include: { attendances: { include: { player: true } } },
   });
   if (!match) notFound();
 
-  const order = teamsFor(match.numTeams) as string[];
   const people = match.attendances
     .map((a) => ({
       id: a.playerId,
       name: a.player.name,
-      team: a.team,
-      isGoalkeeper: a.asGoalkeeper,
+      isGoalkeeper: a.asGoalkeeper || a.player.isGoalkeeper,
       hasPin: Boolean(a.player.pin),
     }))
-    .sort((a, b) => order.indexOf(a.team ?? "") - order.indexOf(b.team ?? "") || a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   if (!match.votingOpen) {
     return (
@@ -73,7 +69,6 @@ async function VoteView({
           people={people.map((p) => ({
             id: p.id,
             name: p.name,
-            team: p.team,
             hasVoted: votedIds.has(p.id),
             hasPin: p.hasPin,
           }))}
@@ -102,20 +97,19 @@ async function VoteView({
 
   const existing = await db.vote.findMany({ where: { matchId: match.id, voterId: voter.id } });
   const initial = Object.fromEntries(existing.map((v) => [v.targetId, v.score]));
-  const others = people.filter((p) => p.id !== voter.id);
+  const targets = people.filter((p) => p.id !== voter.id);
 
   return (
     <div className="flex flex-col gap-6">
       {/* Barra de identificação do votante */}
-      <div className="flex items-center gap-3 border-[3px] border-moss bg-paper-dark px-3 py-2.5 shadow-hard-sm">
-        <TeamDot team={voter.team ?? ""} />
+      <div className="flex items-center justify-between border-[3px] border-moss bg-paper-dark px-4 py-2.5 shadow-hard-sm">
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Votando como</p>
-          <p className="truncate font-serif text-lg leading-tight">{voter.name}</p>
+          <p className="truncate font-serif text-lg leading-tight text-moss">{voter.name}</p>
         </div>
         <Link
           href={`/votar/${token}`}
-          className="border-2 border-moss px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-paper"
+          className="border-2 border-moss bg-paper px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-paper-dark"
         >
           Trocar
         </Link>
@@ -124,8 +118,7 @@ async function VoteView({
       <VoteForm
         token={token}
         voter={voter}
-        teammates={others.filter((p) => p.team === voter.team)}
-        others={others.filter((p) => p.team !== voter.team)}
+        targets={targets}
         initial={initial}
       />
     </div>

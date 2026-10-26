@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Star, ChevronDown, Lock, Globe, User } from "lucide-react";
 import { formatShortDate } from "@/lib/format";
-import { TEAM_META, type TeamKey } from "@/lib/teams";
 import { GloveBadge } from "@/components/ui";
 
 export type MatchItem = {
@@ -129,15 +128,7 @@ export function HistoryPlayersList({
 
                             {wasPresent ? (
                               <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-moss bg-moss/20 px-1.5 py-0.5 rounded">
-                                {att.team && (
-                                  <span
-                                    className={`size-2.5 rounded-xs border border-moss/40 ${
-                                      TEAM_META[att.team as TeamKey]?.swatch ?? ""
-                                    }`}
-                                  />
-                                )}
                                 ✓ Presente
-                                {att.team && ` (Time ${TEAM_META[att.team as TeamKey]?.label ?? att.team})`}
                               </span>
                             ) : (
                               <span className="text-[10px] uppercase font-semibold text-moss-soft/80 bg-paper-dark px-1.5 py-0.5 rounded border border-moss/20">

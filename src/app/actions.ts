@@ -43,7 +43,7 @@ export async function submitVotes(
 ): Promise<{ ok: boolean; error?: string; saved?: number }> {
   const match = await db.match.findUnique({
     where: { voteToken: token },
-    include: { attendances: { where: { team: { not: null } } } },
+    include: { attendances: true },
   });
   if (!match || !match.votingOpen) return { ok: false, error: "A votação desta partida está fechada." };
 

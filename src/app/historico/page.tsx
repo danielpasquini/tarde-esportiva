@@ -67,13 +67,11 @@ async function History() {
       }
 
       for (const att of p.attendances) {
-        if (att.team != null && !att.isUnavailable) {
-          const scores = scoreMap[att.matchId] || [];
-          const avg = scores.length
-            ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
-            : null;
-          attendanceMap[att.matchId] = { team: att.team, avg };
-        }
+        const scores = scoreMap[att.matchId] || [];
+        const avg = scores.length
+          ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
+          : null;
+        attendanceMap[att.matchId] = { team: null, avg };
       }
 
       const timesPlayed = Object.keys(attendanceMap).length;
@@ -121,30 +119,10 @@ async function History() {
                     </span>
                   </div>
                   <div className="p-3">
-                    {m.games.length ? (
-                      <div className="divide-y divide-moss/20">
-                        {m.games.map((g) => (
-                          <div key={g.id} className="grid grid-cols-3 items-center py-1.5 px-2 text-center text-xs font-semibold">
-                            <div className="text-left truncate">
-                              <TeamName team={g.teamA} />
-                            </div>
-                            <div>
-                              <span className="font-serif text-base font-bold bg-moss text-paper px-2 py-0.5 rounded-sm">
-                                {g.scoreA} × {g.scoreB}
-                              </span>
-                            </div>
-                            <div className="text-right truncate">
-                              <TeamName team={g.teamB} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between text-xs text-moss-soft py-1">
-                        <span>{m.numTeams} equipes</span>
-                        <span>{m._count.attendances} jogadores confirmados</span>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between text-xs text-moss-soft py-1">
+                      <span>{m._count.attendances} jogadores participaram</span>
+                      <span className="text-brick font-bold uppercase text-[10px]">Ver detalhes →</span>
+                    </div>
                   </div>
                 </Link>
               </li>

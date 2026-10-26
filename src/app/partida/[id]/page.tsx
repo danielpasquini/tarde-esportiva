@@ -2,25 +2,26 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, User } from "lucide-react";
 import { db } from "@/lib/db";
-import { getMatch } from "@/lib/match";
 import { formatMatchDate } from "@/lib/format";
-import { teamsFor, TEAM_META, type TeamKey } from "@/lib/teams";
-import { PreDrawList, TeamsBoard } from "@/components/lineup";
-import { Loading, StatusStamp } from "@/components/ui";
+import { GloveBadge, Loading, StatusStamp } from "@/components/ui";
 
 async function MatchView({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const { id } = await params;
-  const match = await getMatch(id);
+  const match = await db.match.findUnique({
+    where: { id },
+    include: {
+      attendances: {
+        include: { player: true },
+        orderBy: { player: { name: "asc" } },
+      },
+    },
+  });
   if (!match) notFound();
 
-  const [votesCount, matchTeams] = await Promise.all([
-    db.vote.count({ where: { matchId: match.id } }),
-    Promise.resolve(teamsFor(match.numTeams)),
-  ]);
-
+  const votesCount = await db.vote.count({ where: { matchId: match.id } });
   const showTop5 = match.status === "FINISHED" || votesCount > 0;
 
   return (
@@ -42,19 +43,7 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
           </div>
           <StatusStamp status={match.status} votingOpen={match.votingOpen} />
         </div>
-        <div className="mt-3 pt-3 border-t-2 border-moss/20 flex items-center justify-between text-xs text-moss-soft font-semibold flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1">
-              {matchTeams.map((t) => (
-                <span
-                  key={t}
-                  className={`size-2.5 rounded-xs border border-moss/40 ${TEAM_META[t].swatch}`}
-                  title={TEAM_META[t].label}
-                />
-              ))}
-            </span>
-            <span>{match.numTeams} times × {match.lineSize} jogadores</span>
-          </div>
+        <div className="mt-3 pt-3 border-t-2 border-moss/20 flex items-center justify-between text-xs text-moss-soft font-semibold">
           <span>{match.attendances.length} jogadores confirmados</span>
         </div>
       </header>
@@ -107,12 +96,38 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
         </section>
       )}
 
-      {/* Escalação ou lista prévia */}
-      <section className="flex flex-col gap-4">
-        <h2 className="font-serif text-2xl">
-          {match.status === "OPEN" ? "Lista de Presença" : "Escalação por Colete"}
-        </h2>
-        {match.status === "OPEN" ? <PreDrawList match={match} /> : <TeamsBoard match={match} />}
+      {/* Lista de Jogadores da Partida */}
+      <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
+        <div className="flex items-center justify-between border-b-2 border-moss/20 pb-2">
+          <h2 className="font-serif text-2xl">Jogadores da Partida</h2>
+          <span className="text-xs text-moss-soft font-semibold">{match.attendances.length} presentes</span>
+        </div>
+
+        {match.attendances.length ? (
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {match.attendances.map((a, i) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between p-2.5 border border-moss/20 bg-paper-dark text-xs"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-5 font-mono text-[10px] text-moss-soft">{i + 1}.</span>
+                  <span className="truncate font-semibold text-moss">{a.player.name}</span>
+                  {a.player.isGoalkeeper && <GloveBadge />}
+                </div>
+
+                <Link
+                  href={`/perfil/${a.playerId}`}
+                  className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-brick hover:underline shrink-0"
+                >
+                  <User className="size-3" /> Perfil
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-moss-soft italic">Nenhum jogador registrado nesta partida.</p>
+        )}
       </section>
     </div>
   );

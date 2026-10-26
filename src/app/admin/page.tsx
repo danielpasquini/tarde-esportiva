@@ -5,7 +5,6 @@ import { ArrowRight, LogOut, Trash2, Users } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { formatMatchDate } from "@/lib/format";
-import { teamsFor, TEAM_META, type TeamKey } from "@/lib/teams";
 import { createMatch, deleteMatch, logout } from "@/app/admin/actions";
 import { SubmitButton } from "@/components/client";
 import { Empty, Loading, StatusStamp } from "@/components/ui";
@@ -106,32 +105,8 @@ async function Dashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="numTeams" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
-                Número de Times
-              </label>
-              <select id="numTeams" name="numTeams" className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs font-semibold text-moss outline-none" defaultValue="2">
-                <option value="2">🟦 🟥 2 Times (Azul/Vermelho)</option>
-                <option value="3">🟦 🟥 ⬛ 3 Times (Azul/Vermelho/Preto)</option>
-                <option value="4">🟦 🟥 ⬛ 🟨 4 Times (Azul/Vermelho/Preto/Amarelo)</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="lineSize" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
-                Formato de Jogo (Goleiro + Jogadores)
-              </label>
-              <select id="lineSize" name="lineSize" className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs font-semibold text-moss outline-none" defaultValue="5">
-                <option value="3">1 goleiro + 3 jogadores (4 por time)</option>
-                <option value="4">1 goleiro + 4 jogadores (5 por time)</option>
-                <option value="5">1 goleiro + 5 jogadores (6 por time - Ideal)</option>
-                <option value="6">1 goleiro + 6 jogadores (7 por time)</option>
-              </select>
-            </div>
-          </div>
-
           <SubmitButton className="w-full bg-moss text-paper hover:bg-moss-soft py-3 text-xs font-bold uppercase tracking-widest shadow-hard-sm" id="criar-partida">
-            Criar Partida e Abrir Lista
+            Criar Partida
           </SubmitButton>
         </form>
       </section>
@@ -142,7 +117,6 @@ async function Dashboard() {
         {matches.length ? (
           <ul className="flex flex-col gap-3">
             {matches.map((m) => {
-              const matchTeams = teamsFor(m.numTeams);
               return (
                 <li key={m.id} className="border-[3px] border-moss bg-paper shadow-hard overflow-hidden">
                   <div className="flex items-center justify-between p-4 hover:bg-paper-dark/40 transition-colors">
@@ -164,19 +138,8 @@ async function Dashboard() {
                         <StatusStamp status={m.status} votingOpen={m.votingOpen} />
                       </div>
                       <div className="mt-2 pt-2 border-t border-moss/20 flex items-center justify-between text-xs text-moss-soft font-semibold pr-2 flex-wrap gap-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="flex items-center gap-1">
-                            {matchTeams.map((t) => (
-                              <span
-                                key={t}
-                                className={`size-2.5 rounded-xs border border-moss/40 ${TEAM_META[t].swatch}`}
-                                title={TEAM_META[t].label}
-                              />
-                            ))}
-                          </span>
-                          <span>{m.numTeams} times × {m.lineSize} jogadores</span>
-                        </div>
                         <span>{m._count.attendances} jogadores confirmados</span>
+                        <span className="text-brick font-bold uppercase text-[10px]">Gerenciar Presença e Notas →</span>
                       </div>
                     </Link>
 

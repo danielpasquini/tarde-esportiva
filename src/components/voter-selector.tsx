@@ -3,13 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Shield, ShieldCheck, Lock, X } from "lucide-react";
-import { TEAM_META, isTeam, type TeamKey } from "@/lib/teams";
 import { setPlayerPin, verifyPlayerPin } from "@/app/actions";
 
 export type VoterPerson = {
   id: string;
   name: string;
-  team: string | null;
   hasVoted: boolean;
   hasPin: boolean;
 };
@@ -91,16 +89,10 @@ export function VoterSelector({
     <>
       <ul className="border-[3px] border-moss bg-paper shadow-hard divide-y-2 divide-dashed divide-moss/30">
         {people.map((p) => {
-          const meta = isTeam(p.team) ? TEAM_META[p.team] : null;
-
           if (p.hasVoted) {
             return (
               <li key={p.id} className="opacity-45 bg-paper-dark/60 cursor-not-allowed">
                 <div className="flex w-full items-center gap-3 px-4 py-3.5 text-left select-none">
-                  <span
-                    className={`size-3 shrink-0 border-2 border-moss/50 ${meta?.swatch ?? "bg-paper"}`}
-                    aria-hidden="true"
-                  />
                   <span className="flex-1 font-serif text-lg leading-tight line-through text-moss-soft">
                     {p.name}
                   </span>
@@ -120,10 +112,6 @@ export function VoterSelector({
                 className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-paper-dark group cursor-pointer"
                 id={`eu-sou-${p.id}`}
               >
-                <span
-                  className={`size-3 shrink-0 border-2 border-moss ${meta?.swatch ?? "bg-paper"}`}
-                  aria-hidden="true"
-                />
                 <span className="flex-1 font-serif text-lg leading-tight text-moss group-hover:text-brick transition-colors">
                   {p.name}
                 </span>
@@ -138,9 +126,6 @@ export function VoterSelector({
                   </span>
                 )}
 
-                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-moss-soft">
-                  {meta?.label}
-                </span>
                 <ChevronRight className="size-4 text-moss-soft group-hover:translate-x-0.5 transition-transform" />
               </button>
             </li>

@@ -671,7 +671,7 @@ export async function deleteGame(matchId: string, gameId: string) {
 export async function openVoting(matchId: string) {
   await requireAdmin();
   const match = await db.match.findUnique({ where: { id: matchId } });
-  if (!match || match.status !== "DRAWN") return;
+  if (!match || match.status === "FINISHED") return;
   await db.match.update({ where: { id: matchId }, data: { votingOpen: true } });
   touch(matchId);
 }
@@ -680,7 +680,7 @@ export async function openVoting(matchId: string) {
 export async function closeVoting(matchId: string) {
   await requireAdmin();
   const match = await db.match.findUnique({ where: { id: matchId } });
-  if (!match || match.status !== "DRAWN") return;
+  if (!match || match.status === "FINISHED") return;
 
   const averages = await db.vote.groupBy({
     by: ["targetId"],

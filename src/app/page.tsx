@@ -1,12 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { connection } from "next/server";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Users } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatMatchDate } from "@/lib/format";
-import { preDraw } from "@/lib/match";
-import { TEAM_META, teamsFor } from "@/lib/teams";
-import { Loading, StatusStamp } from "@/components/ui";
+import { GloveBadge, Loading, StatusStamp } from "@/components/ui";
 
 async function ActiveMatchCard() {
   await connection();
@@ -14,8 +12,7 @@ async function ActiveMatchCard() {
     where: { status: { not: "FINISHED" } },
     orderBy: { date: "asc" },
     include: {
-      attendances: { include: { player: true }, orderBy: { createdAt: "asc" } },
-      games: { orderBy: { createdAt: "asc" } },
+      attendances: { include: { player: true }, orderBy: { player: { name: "asc" } } },
     },
   });
 
@@ -34,13 +31,11 @@ async function ActiveMatchCard() {
     );
   }
 
-  const { goalkeepers, line, waitlist, capacity } = preDraw(match);
-  const totalTitulares = goalkeepers.length + line.length;
-  const teams = teamsFor(match.numTeams);
+  const confirmedCount = match.attendances.length;
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Atalhos para Escalação e Votação */}
+      {/* Atalhos para Presença e Votação */}
       <div className="flex flex-col gap-3">
         <Link
           href={`/partida/${match.id}`}
@@ -48,10 +43,10 @@ async function ActiveMatchCard() {
         >
           <span>
             <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-brick">
-              {match.status === "OPEN" ? "Lista de presença" : "Times gerados"}
+              Partida
             </span>
             <span className="block font-serif text-lg leading-tight">
-              {match.status === "OPEN" ? "Ver Lista e Confirmados" : "Ver Escalação da Rodada"}
+              Ver Jogadores Confirmados ({confirmedCount})
             </span>
           </span>
           <ArrowRight className="size-5 text-moss" aria-hidden="true" />
@@ -71,7 +66,7 @@ async function ActiveMatchCard() {
         )}
       </div>
 
-      {/* Súmula da Rodada (inspirada no SummaryCard) */}
+      {/* Súmula da Partida */}
       <section aria-labelledby="resumo-title" className="border-[3px] border-moss bg-paper shadow-hard">
         <div className="flex items-center justify-between border-b-[3px] border-moss bg-paper-dark px-4 py-2.5">
           <div>
@@ -89,70 +84,32 @@ async function ActiveMatchCard() {
           <StatusStamp status={match.status} votingOpen={match.votingOpen} />
         </div>
 
-        <div className="grid grid-cols-2 divide-x-[3px] divide-moss border-b-[3px] border-moss">
-          <div className="p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-moss-soft">Confirmados</p>
-            <p className="mt-1 font-serif text-5xl leading-none tabular-nums">
-              {totalTitulares}
-              <span className="text-2xl text-moss-soft">/{capacity}</span>
+        <div className="p-4 border-b-[3px] border-moss flex items-center justify-between bg-paper">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-moss-soft">Jogadores Confirmados</p>
+            <p className="mt-1 font-serif text-4xl leading-none tabular-nums text-moss">
+              {confirmedCount} {confirmedCount === 1 ? "jogador" : "jogadores"}
             </p>
-            <div
-              className="mt-3 grid grid-cols-5 gap-1"
-              role="img"
-              aria-label={`${totalTitulares} de ${capacity} titulares preenchidos`}
-            >
-              {Array.from({ length: capacity }).map((_, i) => (
-                <span
-                  key={i}
-                  className={`h-3 border border-moss ${i < totalTitulares ? "bg-moss" : "bg-paper"}`}
-                />
-              ))}
-            </div>
           </div>
+          <Users className="size-8 text-moss/30" />
+        </div>
 
-          <div className="p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-moss-soft">Configuração</p>
-            <p className="mt-1 font-serif text-5xl leading-none">{teams.length}</p>
-            <p className="text-[10px] uppercase font-bold text-moss-soft tracking-wider mt-0.5">Times</p>
-            <ul className="mt-2 flex flex-col gap-1 text-xs font-medium">
-              {teams.map((t) => (
-                <li key={t} className="flex items-center gap-1.5">
-                  <span className={`size-3 border border-moss ${TEAM_META[t].swatch}`} />
-                  <span>{TEAM_META[t].label}</span>
+        {/* Lista de Confirmados */}
+        <div className="p-4">
+          <h3 className="font-serif text-base text-moss mb-2">Lista de Presença</h3>
+          {confirmedCount === 0 ? (
+            <p className="text-xs text-moss-soft">Nenhum jogador confirmado ainda.</p>
+          ) : (
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {match.attendances.map((a, i) => (
+                <li key={a.id} className="flex items-center gap-2 p-2 border border-moss/20 bg-paper-dark text-xs">
+                  <span className="w-5 font-mono text-[10px] text-moss-soft">{i + 1}.</span>
+                  <span className="flex-1 truncate font-semibold text-moss">{a.player.name}</span>
+                  {a.player.isGoalkeeper && <GloveBadge />}
                 </li>
               ))}
             </ul>
-          </div>
-        </div>
-
-        {/* Lista de Espera */}
-        <div className="p-4">
-          <div className="border-2 border-dashed border-brick bg-brick/5 p-3">
-            <div className="flex items-baseline justify-between">
-              <h3 className="font-serif text-base text-brick">Lista de Espera</h3>
-              <span className="text-xs font-semibold uppercase tracking-wider text-brick">
-                {waitlist.length} na espera
-              </span>
-            </div>
-
-            {waitlist.length === 0 ? (
-              <p className="mt-1 text-xs text-moss-soft">Ninguém na espera.</p>
-            ) : (
-              <ol className="mt-2 flex flex-col gap-1 text-xs">
-                {waitlist.map((a, i) => (
-                  <li key={a.id} className="flex items-center gap-2">
-                    <span className="w-4 font-serif text-brick">{i + 1}.</span>
-                    <span className="flex-1 truncate font-medium">{a.player.name}</span>
-                    {a.player.isGoalkeeper && (
-                      <span className="border border-moss px-1 text-[9px] font-bold uppercase bg-paper">
-                        GK
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
+          )}
         </div>
       </section>
     </div>

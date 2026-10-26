@@ -3,8 +3,7 @@ import { TEAM_META, isTeam } from "@/lib/teams";
 import { cn } from "@/lib/utils";
 
 export const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  OPEN: { label: "Lista aberta", cls: "stamp-open" },
-  DRAWN: { label: "Times sorteados", cls: "stamp-drawn" },
+  OPEN: { label: "Aberta", cls: "stamp-open" },
   FINISHED: { label: "Encerrada", cls: "stamp-done" },
 };
 
