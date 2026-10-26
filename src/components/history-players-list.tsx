@@ -61,7 +61,21 @@ export function HistoryPlayersList({
                   )}
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  <Link
+                    href={`/perfil/${p.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-brick bg-paper hover:bg-paper-dark border border-moss/30 px-2 py-0.5 rounded shadow-xs"
+                    title="Acessar Perfil Individual"
+                  >
+                    {p.hasPin && !p.isPublic && !isOrganizer ? (
+                      <Lock className="size-2.5 text-brick" />
+                    ) : (
+                      <User className="size-2.5 text-brick" />
+                    )}
+                    Perfil
+                  </Link>
+
                   <span className="text-[10px] uppercase font-bold text-moss-soft tracking-wider bg-moss/10 px-2 py-0.5 rounded">
                     {p.timesPlayed} {p.timesPlayed === 1 ? "partida" : "partidas"}
                   </span>
@@ -76,11 +90,11 @@ export function HistoryPlayersList({
                     </div>
                   )}
 
-                  <span className="text-[10px] font-bold uppercase text-brick underline group-open:hidden">
-                    Ver partidas
+                  <span className="text-[10px] font-bold uppercase text-moss-soft underline group-open:hidden">
+                    Partidas ▾
                   </span>
-                  <span className="text-[10px] font-bold uppercase text-brick underline hidden group-open:inline">
-                    Ocultar
+                  <span className="text-[10px] font-bold uppercase text-moss-soft underline hidden group-open:inline">
+                    Ocultar ▴
                   </span>
                 </div>
               </summary>

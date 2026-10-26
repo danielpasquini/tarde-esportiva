@@ -128,12 +128,12 @@ async function Players() {
                       <span className="font-semibold text-sm truncate">{p.name}</span>
                       {p.isGoalkeeper && <GloveBadge />}
                       {p.pin ? (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider bg-moss/10 text-moss px-1.5 py-0.5 rounded" title="PIN cadastrado">
-                          <Lock className="size-2.5" /> PIN Ativo
+                        <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider bg-moss/10 text-moss px-1.5 py-0.5 rounded shrink-0" title="PIN cadastrado">
+                          <Lock className="size-2.5" /> <span className="hidden sm:inline">PIN Ativo</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-moss-soft/60 px-1.5 py-0.5" title="Sem PIN">
-                          <Unlock className="size-2.5" /> Sem PIN
+                        <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-moss-soft/60 px-1 py-0.5 shrink-0" title="Sem PIN cadastrado">
+                          <Unlock className="size-2.5" /> <span className="hidden sm:inline">Sem PIN</span>
                         </span>
                       )}
                       {!p.active && (

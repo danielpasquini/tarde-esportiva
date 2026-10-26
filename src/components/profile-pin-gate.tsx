@@ -69,6 +69,7 @@ export function ProfilePinGate({
             inputMode="numeric"
             pattern="[0-9]*"
             maxLength={4}
+            autoComplete="one-time-code"
             value={pin}
             onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
             placeholder="••••"

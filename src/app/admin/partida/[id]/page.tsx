@@ -199,7 +199,11 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
               <span className="text-xs text-moss font-mono truncate block">/votar/{match.voteToken}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <CopyLink url={`/votar/${match.voteToken}`} id="copiar-link-voto" />
+              <CopyLink
+                url={`/votar/${match.voteToken}`}
+                id="copiar-link-voto"
+                className="py-1.5 px-3 text-xs w-auto shadow-none"
+              />
               <Link
                 href={`/votar/${match.voteToken}`}
                 className="border-2 border-moss bg-paper px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-paper-dark"

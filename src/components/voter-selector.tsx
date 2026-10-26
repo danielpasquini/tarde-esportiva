@@ -169,6 +169,7 @@ export function VoterSelector({
                     inputMode="numeric"
                     pattern="[0-9]*"
                     maxLength={4}
+                    autoComplete="one-time-code"
                     value={pinInput}
                     onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
                     placeholder="••••"
@@ -229,6 +230,7 @@ export function VoterSelector({
                       inputMode="numeric"
                       pattern="[0-9]*"
                       maxLength={4}
+                      autoComplete="one-time-code"
                       value={pinInput}
                       onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
                       placeholder="••••"
