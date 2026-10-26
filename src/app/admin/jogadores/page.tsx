@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { connection } from "next/server";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Lock, Unlock } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
-import { createPlayer, deletePlayer, importPlayersBatch, updatePlayer } from "@/app/admin/actions";
+import { createPlayer, deletePlayer, importPlayersBatch, updatePlayer, resetPlayerPin } from "@/app/admin/actions";
 import { SubmitButton } from "@/components/client";
 import { Empty, Loading, GloveBadge } from "@/components/ui";
 
@@ -50,7 +50,7 @@ async function Players() {
         <form action={createPlayer} className="flex flex-col gap-3">
           <div>
             <label htmlFor="new-name" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
-              Nome do Atleta
+              Nome do Jogador
             </label>
             <input
               id="new-name"
@@ -114,7 +114,7 @@ async function Players() {
         <div className="flex items-baseline justify-between border-b-2 border-moss pb-1">
           <h3 className="font-serif text-2xl">Jogadores Cadastrados</h3>
           <span className="text-[10px] font-bold uppercase tracking-wider text-moss-soft">
-            {players.length} atletas
+            {players.length} jogadores
           </span>
         </div>
 
@@ -127,6 +127,15 @@ async function Players() {
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-semibold text-sm truncate">{p.name}</span>
                       {p.isGoalkeeper && <GloveBadge />}
+                      {p.pin ? (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider bg-moss/10 text-moss px-1.5 py-0.5 rounded" title="PIN cadastrado">
+                          <Lock className="size-2.5" /> PIN Ativo
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-moss-soft/60 px-1.5 py-0.5" title="Sem PIN">
+                          <Unlock className="size-2.5" /> Sem PIN
+                        </span>
+                      )}
                       {!p.active && (
                         <span className="border border-moss px-1 text-[9px] font-bold uppercase text-moss-soft">
                           Inativo
@@ -178,6 +187,50 @@ async function Players() {
                       </SubmitButton>
                     </div>
                   </form>
+
+                  {/* Gestão de PIN e Perfil */}
+                  <div className="p-3.5 border-t border-moss/20 bg-paper flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      {p.pin ? (
+                        <>
+                          <Lock className="size-4 text-brick shrink-0" />
+                          <div>
+                            <span className="text-xs font-bold text-moss block">PIN Cadastrado</span>
+                            <span className="text-[10px] text-moss-soft">Votos e perfil protegidos</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <Unlock className="size-4 text-moss-soft shrink-0" />
+                          <div>
+                            <span className="text-xs font-bold text-moss block">Sem PIN cadastrado</span>
+                            <span className="text-[10px] text-moss-soft">O jogador pode cadastrar ao votar</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/perfil/${p.id}`}
+                        className="text-[11px] font-bold uppercase tracking-wider text-moss hover:underline flex items-center gap-1 border border-moss/30 px-2.5 py-1 bg-paper shadow-xs"
+                      >
+                        Ver Perfil <ArrowUpRight className="size-3" />
+                      </Link>
+
+                      {p.pin && (
+                        <form action={resetPlayerPin.bind(null, p.id)}>
+                          <SubmitButton
+                            className="bg-brick text-paper hover:bg-brick/90 py-1 px-2.5 text-[10px] font-bold uppercase tracking-wider shadow-none cursor-pointer"
+                            confirm={`Tem certeza que deseja resetar o PIN de ${p.name}? Se alguém cadastrou por engano, ele poderá cadastrar um novo PIN.`}
+                          >
+                            ⚡ Resetar PIN
+                          </SubmitButton>
+                        </form>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="px-4 pb-4 pt-1 bg-paper-dark border-t border-moss/10 flex justify-end">
                     <form action={deletePlayer.bind(null, p.id)}>
                       <SubmitButton

@@ -14,6 +14,8 @@ model Player {
   baseRating   Float        @default(3)
   ratedMatches Int          @default(0)
   active       Boolean      @default(true)
+  pin          String?
+  isPublic     Boolean      @default(false)
   createdAt    DateTime     @default(now())
   attendances  Attendance[]
   votesGiven   Vote[]       @relation("voter")

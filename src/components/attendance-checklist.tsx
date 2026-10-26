@@ -118,7 +118,7 @@ export function AttendanceChecklist({
         className="w-full bg-moss text-paper hover:bg-moss-soft py-2.5 text-xs font-bold uppercase tracking-wider"
         disabled={selectedIds.size === 0}
       >
-        Confirmar {selectedIds.size > 0 ? `(${selectedIds.size}) ` : ""}Atletas Selecionados
+        Confirmar {selectedIds.size > 0 ? `(${selectedIds.size}) ` : ""}Jogadores Selecionados
       </SubmitButton>
     </form>
   );

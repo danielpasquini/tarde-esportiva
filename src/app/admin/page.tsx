@@ -72,7 +72,7 @@ async function Dashboard() {
               id="date"
               name="date"
               type="datetime-local"
-              className="w-full max-w-full box-border min-w-0 border-2 border-moss bg-paper px-3 py-2 text-xs font-mono text-moss outline-none"
+              className="block w-full min-w-0 h-10 border-2 border-moss bg-paper px-3 py-2 text-xs font-mono text-moss outline-none"
               defaultValue={defaultDate()}
               required
             />
@@ -93,7 +93,7 @@ async function Dashboard() {
             </div>
             <div>
               <label htmlFor="cost" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
-                Valor por Atleta em R$ (Opcional)
+                Valor por Jogador em R$ (Opcional)
               </label>
               <input
                 id="cost"
@@ -119,13 +119,13 @@ async function Dashboard() {
             </div>
             <div>
               <label htmlFor="lineSize" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
-                Formato de Jogo (Goleiro + Linha)
+                Formato de Jogo (Goleiro + Jogadores)
               </label>
               <select id="lineSize" name="lineSize" className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs font-semibold text-moss outline-none" defaultValue="5">
-                <option value="3">1 goleiro + 3 linha (4 por time)</option>
-                <option value="4">1 goleiro + 4 linha (5 por time)</option>
-                <option value="5">1 goleiro + 5 linha (6 por time - Ideal)</option>
-                <option value="6">1 goleiro + 6 linha (7 por time)</option>
+                <option value="3">1 goleiro + 3 jogadores (4 por time)</option>
+                <option value="4">1 goleiro + 4 jogadores (5 por time)</option>
+                <option value="5">1 goleiro + 5 jogadores (6 por time - Ideal)</option>
+                <option value="6">1 goleiro + 6 jogadores (7 por time)</option>
               </select>
             </div>
           </div>
@@ -174,9 +174,9 @@ async function Dashboard() {
                               />
                             ))}
                           </span>
-                          <span>{m.numTeams} times × {m.lineSize} na linha</span>
+                          <span>{m.numTeams} times × {m.lineSize} jogadores</span>
                         </div>
-                        <span>{m._count.attendances} atletas confirmados</span>
+                        <span>{m._count.attendances} jogadores confirmados</span>
                       </div>
                     </Link>
 

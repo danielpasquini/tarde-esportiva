@@ -2,12 +2,12 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ArrowLeft, ArrowUpRight, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Trash2, Zap } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { getMatch } from "@/lib/match";
 import { formatMatchDate, formatDateTimeInput } from "@/lib/format";
-import { teamsFor, teamLabel, TEAM_META, type TeamKey } from "@/lib/teams";
+import { teamsFor, teamLabel, TEAM_META, TEAM_ORDER, type TeamKey } from "@/lib/teams";
 import {
   addAttendances,
   addAttendancesByText,
@@ -17,6 +17,8 @@ import {
   openVoting,
   reopenList,
   microReorganize,
+  planBReorganize,
+  toggleFixedGkMode,
   togglePlayerUnavailable,
   applySuggestedFormat,
   updateMatchConfig,
@@ -60,45 +62,67 @@ async function AdminVotesTable({ matchId }: { matchId: string }) {
   }
 
   return (
-    <div className="overflow-x-auto border-2 border-moss">
-      <table className="w-full text-left text-xs bg-paper">
-        <thead className="bg-paper-dark border-b-2 border-moss uppercase tracking-wider text-[10px] text-moss-soft">
-          <tr>
-            <th className="p-2.5">#</th>
-            <th className="p-2.5">Atleta</th>
-            <th className="p-2.5 text-center">Colete</th>
-            <th className="p-2.5 text-center">Votos</th>
-            <th className="p-2.5 text-right">Média Partida</th>
-            <th className="p-2.5 text-right">Nota Base Geral</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-moss/20">
-          {list.map((p, idx) => (
-            <tr key={p.id} className={idx < 5 ? "bg-amber-500/5 font-semibold" : ""}>
-              <td className="p-2.5 tabular-nums text-moss-soft">{idx + 1}º</td>
-              <td className="p-2.5">
-                <div className="flex items-center gap-1.5">
-                  <span>{p.name}</span>
-                  {p.isGoalkeeper && <GloveBadge />}
-                  {idx === 0 && (
-                    <span className="text-[9px] bg-amber-500 text-white font-bold px-1 rounded">
-                      CRAQUE
-                    </span>
-                  )}
-                </div>
-              </td>
-              <td className="p-2.5 text-center uppercase text-[10px]">{p.team ?? "–"}</td>
-              <td className="p-2.5 text-center tabular-nums">{p.count}</td>
-              <td className="p-2.5 text-right font-mono font-bold text-moss">
-                {p.avg > 0 ? `★ ${p.avg.toFixed(1).replace(".", ",")}` : "–"}
-              </td>
-              <td className="p-2.5 text-right font-mono text-moss-soft">
-                ★ {p.baseRating.toFixed(1).replace(".", ",")}
-              </td>
+    <div className="border-2 border-moss overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs bg-paper">
+          <thead className="bg-paper-dark border-b-2 border-moss uppercase tracking-wider text-[9px] sm:text-[10px] text-moss-soft">
+            <tr>
+              <th className="p-2 sm:p-2.5 w-8">#</th>
+              <th className="p-2 sm:p-2.5">Jogador</th>
+              <th className="p-2 sm:p-2.5 text-center">
+                <span className="hidden sm:inline">Colete</span>
+                <span className="sm:hidden">Time</span>
+              </th>
+              <th className="p-2 sm:p-2.5 text-center">
+                <span className="hidden sm:inline">Votos</span>
+                <span className="sm:hidden">Vts</span>
+              </th>
+              <th className="p-2 sm:p-2.5 text-right">
+                <span className="hidden sm:inline">Média Partida</span>
+                <span className="sm:hidden">Média</span>
+              </th>
+              <th className="p-2 sm:p-2.5 text-right">
+                <span className="hidden sm:inline">Nota Base Geral</span>
+                <span className="sm:hidden">Base</span>
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-moss/20 text-[11px] sm:text-xs">
+            {list.map((p, idx) => (
+              <tr key={p.id} className={idx < 5 ? "bg-amber-500/5 font-semibold" : ""}>
+                <td className="p-2 sm:p-2.5 tabular-nums text-moss-soft">{idx + 1}º</td>
+                <td className="p-2 sm:p-2.5 min-w-0 max-w-[130px] sm:max-w-none">
+                  <div className="flex items-center gap-1.5 truncate">
+                    {p.team && (
+                      <span
+                        className={`size-2.5 rounded-xs border border-moss/40 shrink-0 ${
+                          TEAM_META[p.team as TeamKey]?.swatch ?? ""
+                        }`}
+                        title={TEAM_META[p.team as TeamKey]?.label}
+                      />
+                    )}
+                    <span className="truncate">{p.name}</span>
+                    {p.isGoalkeeper && <GloveBadge />}
+                    {idx === 0 && (
+                      <span className="text-[8px] sm:text-[9px] bg-amber-500 text-white font-bold px-1 rounded shrink-0">
+                        CRAQUE
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="p-2 sm:p-2.5 text-center uppercase text-[10px]">{p.team ?? "–"}</td>
+                <td className="p-2 sm:p-2.5 text-center tabular-nums">{p.count}</td>
+                <td className="p-2 sm:p-2.5 text-right font-mono font-bold text-moss whitespace-nowrap">
+                  {p.avg > 0 ? `★ ${p.avg.toFixed(1).replace(".", ",")}` : "–"}
+                </td>
+                <td className="p-2 sm:p-2.5 text-right font-mono text-moss-soft whitespace-nowrap">
+                  ★ {p.baseRating.toFixed(1).replace(".", ",")}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -151,16 +175,16 @@ function getFormatSuggestion(match: {
     let reason = "";
     if (bestSize === 5) {
       if (lineAvailable >= slotsNeeded) {
-        reason = `Com ${lineAvailable} jogadores de linha confirmados para ${numTeams} times, o formato ideal (1 goleiro + 5 linha) acomoda todo o elenco de forma limpa, sem necessidade de empréstimos excessivos.`;
+        reason = `Com ${lineAvailable} jogadores confirmados para ${numTeams} times, o formato ideal (1 goleiro + 5 jogadores) acomoda todo o elenco de forma limpa, sem necessidade de empréstimos excessivos.`;
       } else {
-        reason = `O formato ideal do grupo é 1 goleiro + 5 linha. Ele garante a dinâmica ideal de jogo para o número de atletas confirmados.`;
+        reason = `O formato ideal do grupo é 1 goleiro + 5 jogadores. Ele garante a dinâmica ideal de jogo para o número de jogadores confirmados.`;
       }
     } else if (bestSize === 6 && lineAvailable > numTeams * 5) {
-      reason = `Há muitos atletas disponíveis (${lineAvailable} de linha). Mudar para 1 goleiro + 6 linha permite que todos joguem com menos tempo de espera.`;
+      reason = `Há muitos jogadores disponíveis (${lineAvailable} jogadores). Mudar para 1 goleiro + 6 jogadores permite que todos joguem com menos tempo de espera.`;
     } else if (bestSize < currentLineSize) {
-      reason = `O formato atual (1+${currentLineSize}) exige muitos empréstimos devido ao número de atletas presentes (${lineAvailable} de linha). Mudar para 1+${bestSize} fecha as equipes de forma mais natural.`;
+      reason = `O formato atual (1+${currentLineSize}) exige muitos empréstimos devido ao número de jogadores presentes (${lineAvailable} jogadores). Mudar para 1+${bestSize} fecha as equipes de forma mais natural.`;
     } else {
-      reason = `Com ${lineAvailable} jogadores de linha confirmados, o formato 1 goleiro + ${bestSize} linha otimiza a montagem dos times.`;
+      reason = `Com ${lineAvailable} jogadores confirmados, o formato 1 goleiro + ${bestSize} jogadores otimiza a montagem dos times.`;
     }
 
     return {
@@ -202,7 +226,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
             {(match.location || match.cost != null) && (
               <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-moss font-semibold">
                 {match.location && <span>📍 {match.location}</span>}
-                {match.cost != null && <span>💰 R$ {match.cost.toFixed(2).replace(".", ",")} por atleta</span>}
+                {match.cost != null && <span>💰 R$ {match.cost.toFixed(2).replace(".", ",")} por jogador</span>}
               </div>
             )}
           </div>
@@ -240,14 +264,14 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </header>
 
-      {/* Sugestão Inteligente de Formato (Goleiro + Linha) */}
-      {formatSuggestion && match.status !== "FINISHED" && (
+      {/* Sugestão Inteligente de Formato (Goleiro + Jogadores) - Somente após o primeiro sorteio */}
+      {formatSuggestion && match.status === "DRAWN" && (
         <section className="border-[3px] border-moss bg-amber-500/15 p-4 shadow-hard flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xl">💡</span>
               <h3 className="font-serif text-base sm:text-lg font-bold text-moss">
-                Sugestão de Formato: {formatSuggestion.isIdeal ? "1 Goleiro + 5 Linha (Ideal do Grupo)" : `1 Goleiro + ${formatSuggestion.suggestedLineSize} Linha`}
+                Sugestão de Formato: {formatSuggestion.isIdeal ? "1 Goleiro + 5 Jogadores (Ideal do Grupo)" : `1 Goleiro + ${formatSuggestion.suggestedLineSize} Jogadores`}
               </h3>
             </div>
             <span className="text-[10px] font-bold uppercase tracking-wider bg-moss text-paper px-2 py-0.5 rounded">
@@ -286,11 +310,24 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
         <h2 className="font-serif text-xl border-b-2 border-moss/20 pb-2">Ações da Partida</h2>
         <div className="flex flex-col gap-2">
           {match.status === "OPEN" && (
-            <form action={drawTeams.bind(null, match.id)}>
+            <form action={drawTeams.bind(null, match.id)} className="flex flex-col gap-2.5">
+              <div className="flex items-center justify-between border-2 border-moss bg-paper-dark p-2.5">
+                <span className="text-xs font-bold text-moss flex items-center gap-1.5">
+                  <span>🧤</span> Goleiros:
+                </span>
+                <select
+                  name="fixedGk"
+                  defaultValue="true"
+                  className="border border-moss bg-paper px-2 py-1 text-xs font-bold text-moss outline-none"
+                >
+                  <option value="true">Goleiros Fixos</option>
+                  <option value="false">Goleiros Rotativos (Revezamento)</option>
+                </select>
+              </div>
               <SubmitButton
                 className="w-full bg-moss text-paper hover:bg-moss-soft py-3 text-xs font-bold uppercase tracking-widest shadow-hard-brick"
                 id="sortear-times"
-                confirm="Sortear times agora? Os jogadores e goleiros serão distribuídos de forma equilibrada entre as equipes."
+                confirm="Sortear times agora? Os jogadores serão distribuídos de forma equilibrada entre as equipes."
               >
                 Sortear Times
               </SubmitButton>
@@ -299,24 +336,45 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
 
           {match.status === "DRAWN" && (
             <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-2 gap-2">
-                <form action={drawTeams.bind(null, match.id)}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <form action={drawTeams.bind(null, match.id)} className="flex flex-col gap-1.5 border border-moss/20 p-2 bg-paper-dark/30 rounded">
+                  <div className="flex items-center justify-between text-xs font-bold text-moss">
+                    <span>🧤 Goleiros:</span>
+                    <select
+                      name="fixedGk"
+                      defaultValue={match.attendances.some((a) => a.asGoalkeeper) ? "true" : "false"}
+                      className="border border-moss bg-paper px-2 py-0.5 text-[11px] font-bold text-moss outline-none"
+                    >
+                      <option value="true">Fixos</option>
+                      <option value="false">Rotativos</option>
+                    </select>
+                  </div>
                   <SubmitButton
-                    className="w-full bg-paper-dark text-moss hover:bg-paper py-2.5 text-xs font-bold uppercase tracking-wider"
+                    className="w-full bg-paper-dark text-moss hover:bg-paper py-2 text-xs font-bold uppercase tracking-wider"
                     confirm="Refazer sorteio? Os coletes atuais serão recalculados."
                   >
                     Refazer Sorteio
                   </SubmitButton>
                 </form>
 
-                <form action={reopenList.bind(null, match.id)}>
-                  <SubmitButton
-                    className="w-full bg-paper-dark text-moss hover:bg-paper py-2.5 text-xs font-bold uppercase tracking-wider"
-                    confirm="Reabrir lista? Os times serão desfeitos para adicionar novos nomes."
-                  >
-                    Reabrir Lista
-                  </SubmitButton>
-                </form>
+                <div className="flex flex-col gap-1.5 justify-between">
+                  <form action={toggleFixedGkMode.bind(null, match.id)}>
+                    <SubmitButton className="w-full bg-paper text-moss hover:bg-paper-dark py-2 text-[11px] font-bold uppercase tracking-wider border border-moss/30 shadow-none">
+                      {match.attendances.some((a) => a.asGoalkeeper)
+                        ? "🧤 Goleiros Fixos Ativos (Alternar para Rotativos)"
+                        : "🔄 Goleiros Rotativos (Alternar para Fixos)"}
+                    </SubmitButton>
+                  </form>
+
+                  <form action={reopenList.bind(null, match.id)}>
+                    <SubmitButton
+                      className="w-full bg-paper-dark text-moss hover:bg-paper py-2 text-xs font-bold uppercase tracking-wider"
+                      confirm="Reabrir lista? Os times serão desfeitos para adicionar novos nomes."
+                    >
+                      Reabrir Lista
+                    </SubmitButton>
+                  </form>
+                </div>
               </div>
 
               {!match.votingOpen && (
@@ -375,7 +433,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
         <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-3">
           <div className="flex items-center justify-between border-b-2 border-moss/20 pb-2">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Área Restrita do Admin</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Área Restrita do Organizador</span>
               <h2 className="font-serif text-xl">Todas as Notas da Partida</h2>
             </div>
           </div>
@@ -392,11 +450,11 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
           <div className="flex items-center justify-between border-b-2 border-moss/20 pb-2">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-moss-soft">Controle de Lista</span>
-              <h2 className="font-serif text-lg">Confirmar Atletas na Partida ({unconfirmed.length} disponíveis)</h2>
+              <h2 className="font-serif text-lg">Confirmar Jogadores na Partida ({unconfirmed.length} disponíveis)</h2>
             </div>
           </div>
           <p className="text-xs text-moss-soft">
-            Selecione abaixo os atletas presentes para registrar na partida:
+            Selecione abaixo os jogadores presentes para registrar na partida:
           </p>
           <AttendanceChecklist players={unconfirmed} action={addAttendances.bind(null, match.id)} />
 
@@ -427,7 +485,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
         </section>
       )}
 
-      {/* Card: Jogadores Indisponíveis (Atraso / Lesão) e Microreorganização */}
+      {/* Card: Jogadores Indisponíveis e Reorganização */}
       {match.status === "DRAWN" && (
         <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
           <div className="flex items-center justify-between border-b-2 border-moss/20 pb-2">
@@ -435,7 +493,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">
                 Gestão de Desfalques & Imprevistos
               </span>
-              <h2 className="font-serif text-xl">Jogadores Indisponíveis (Atraso / Lesão)</h2>
+              <h2 className="font-serif text-xl">Jogadores Indisponíveis</h2>
             </div>
             <span className="text-xs font-mono font-bold text-moss-soft">
               {match.attendances.filter((a) => a.isUnavailable).length} desfalque(s)
@@ -443,12 +501,19 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
           </div>
 
           <p className="text-xs text-moss-soft">
-            Selecione atletas que tiveram imprevisto (atraso ou lesão). O sistema fará a <strong>microreorganização balanceada pegando atletas emprestados</strong> de outras equipes para completar o time sem criar bancos.
+            Selecione jogadores que tiveram imprevisto. O balanceamento se dará por empréstimo do time que não está jogando para manter a paridade sem permitir 6 contra 7.
           </p>
 
           <div className="border-2 border-moss bg-paper divide-y divide-moss/20 max-h-72 overflow-y-auto">
-            {match.attendances
-              .filter((a) => a.team)
+            {[...match.attendances.filter((a) => a.team)]
+              .sort((a, b) => {
+                const teamIdxA = TEAM_ORDER.indexOf(a.team as TeamKey);
+                const teamIdxB = TEAM_ORDER.indexOf(b.team as TeamKey);
+                if (teamIdxA !== teamIdxB) return teamIdxA - teamIdxB;
+                const rA = a.ratingAtDraw ?? a.player.baseRating;
+                const rB = b.ratingAtDraw ?? b.player.baseRating;
+                return rB - rA || a.player.name.localeCompare(b.player.name);
+              })
               .map((att) => (
                 <div
                   key={att.id}
@@ -457,17 +522,19 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
                   }`}
                 >
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span
-                      className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border ${
-                        TEAM_META[att.team as TeamKey]?.swatch ?? ""
-                      }`}
-                    >
-                      {TEAM_META[att.team as TeamKey]?.label ?? att.team}
-                    </span>
                     <span className={`font-semibold ${att.isUnavailable ? "line-through text-brick" : ""}`}>
                       {att.player.name}
                     </span>
+                    <span
+                      className={`size-3 rounded-xs border border-moss/40 shrink-0 ${
+                        TEAM_META[att.team as TeamKey]?.swatch ?? ""
+                      }`}
+                      title={`Time ${TEAM_META[att.team as TeamKey]?.label ?? att.team}`}
+                    />
                     {(att.asGoalkeeper || att.player.isGoalkeeper) && <GloveBadge />}
+                    <span className="font-mono text-xs text-moss-soft">
+                      ★ {(att.ratingAtDraw ?? att.player.baseRating).toFixed(1).replace(".", ",")}
+                    </span>
                     {att.isUnavailable && (
                       <span className="text-[9px] font-bold text-brick bg-paper px-1.5 py-0.5 border border-brick uppercase">
                         {att.unavailableReason || "Indisponível"}
@@ -480,7 +547,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
                     )}
                   </div>
 
-                  <form action={togglePlayerUnavailable.bind(null, match.id, att.id, "Atraso/Lesão")}>
+                  <form action={togglePlayerUnavailable.bind(null, match.id, att.id, "Indisponível")}>
                     <SubmitButton
                       className={`h-7 px-2.5 text-[10px] font-bold uppercase tracking-wider rounded border shadow-none ${
                         att.isUnavailable
@@ -488,18 +555,79 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
                           : "bg-brick/10 text-brick border-brick/40 hover:bg-brick hover:text-paper"
                       }`}
                     >
-                      {att.isUnavailable ? "✓ Restaurar Atleta" : "⚠️ Marcar Indisponível"}
+                      {att.isUnavailable ? "✓ Restaurar Jogador" : "⚠️ Marcar Indisponível"}
                     </SubmitButton>
                   </form>
                 </div>
               ))}
           </div>
 
+          {/* Demonstração de Alterações e Empréstimos Ativos */}
+          <div className="border-2 border-moss bg-paper-dark p-3.5 flex flex-col gap-2">
+            <div className="flex items-center justify-between border-b border-moss/20 pb-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-moss">
+                Demonstração das Mudanças & Empréstimos
+              </span>
+              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-950">
+                {match.attendances.filter((a) => a.borrowedToTeam != null).length} jogador(es) emprestado(s)
+              </span>
+            </div>
+
+            {match.attendances.some((a) => a.borrowedToTeam != null) ? (
+              <ul className="flex flex-col gap-1.5">
+                {match.attendances
+                  .filter((a) => a.borrowedToTeam != null)
+                  .map((b) => (
+                    <li key={`loan-${b.id}`} className="text-xs flex items-center justify-between bg-paper p-2 border border-moss/25 rounded">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-moss">{b.player.name}</span>
+                        <span className={`inline-block size-2.5 rounded-xs ${TEAM_META[b.team as TeamKey]?.swatch}`} />
+                        <span className="text-moss-soft text-[11px]">(Time {TEAM_META[b.team as TeamKey]?.label})</span>
+                        <span className="text-brick font-bold">➔ Emprestado para</span>
+                        <span className="font-bold text-moss">Time {TEAM_META[b.borrowedToTeam as TeamKey]?.label}</span>
+                        <span className={`inline-block size-2.5 rounded-xs ${TEAM_META[b.borrowedToTeam as TeamKey]?.swatch}`} />
+                      </div>
+                      <span className="font-mono text-[11px] text-moss-soft">
+                        ★ {(b.ratingAtDraw ?? b.player.baseRating).toFixed(1).replace(".", ",")}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-moss-soft italic">
+                {match.attendances.some((a) => a.isUnavailable)
+                  ? "Existem desfalques marcados. Clique no botão abaixo para calcular os empréstimos ideais."
+                  : "Nenhum jogador emprestado no momento. As equipes estão completas."}
+              </p>
+            )}
+          </div>
+
           <form action={microReorganize.bind(null, match.id)}>
-            <SubmitButton className="w-full bg-moss text-paper hover:bg-moss-soft py-3 text-xs font-bold uppercase tracking-wider shadow-hard-sm">
-              ⚡ Executar Microreorganização Balanceada (com Jogador Emprestado)
+            <SubmitButton className="w-full bg-moss text-paper hover:bg-moss-soft py-3 text-xs font-bold uppercase tracking-wider shadow-hard-sm flex items-center justify-center gap-1.5">
+              <Zap className="size-4" /> Emprestar Jogador/Reorganizar
             </SubmitButton>
           </form>
+
+          {/* Plano B: Reorganização Definitiva */}
+          <details className="border border-moss/30 bg-paper p-3 rounded group">
+            <summary className="text-xs font-bold uppercase tracking-wider text-moss cursor-pointer flex items-center justify-between select-none">
+              <span>📋 Plano B: Reorganização Pequena nos Times e Goleiros</span>
+              <span className="text-[10px] text-moss-soft group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div className="pt-2.5 mt-2 border-t border-moss/20 flex flex-col gap-2 text-xs">
+              <p className="text-moss-soft text-[11px]">
+                Transfere jogadores e goleiros em definitivo para suprir os desfalques entre as equipes, sem necessidade de empréstimos jogo a jogo.
+              </p>
+              <form action={planBReorganize.bind(null, match.id)}>
+                <SubmitButton
+                  className="w-full bg-paper-dark hover:bg-paper text-moss border border-moss py-2 text-xs font-bold uppercase tracking-wider shadow-none"
+                  confirm="Executar Plano B? Jogadores disponíveis serão transferidos de time permanentemente para cobrir os desfalques."
+                >
+                  Executar Plano B (Reorganização Direta)
+                </SubmitButton>
+              </form>
+            </div>
+          </details>
         </section>
       )}
 
@@ -537,7 +665,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
                   name="date"
                   type="datetime-local"
                   defaultValue={formatDateTimeInput(match.date)}
-                  className="w-full max-w-full box-border min-w-0 border-2 border-moss bg-paper px-3 py-2 text-xs font-mono text-moss outline-none"
+                  className="block w-full min-w-0 h-10 border-2 border-moss bg-paper px-3 py-2 text-xs font-mono text-moss outline-none"
                   required
                 />
               </div>
@@ -575,7 +703,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
               </div>
               <div>
                 <label htmlFor="edit-cost" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
-                  Valor por Atleta em R$ (Opcional)
+                  Valor por Jogador em R$ (Opcional)
                 </label>
                 <input
                   id="edit-cost"
@@ -608,7 +736,7 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
 
               <div>
                 <label htmlFor="edit-lineSize" className="block text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-1">
-                  Formato (Goleiro + Linha)
+                  Formato (Goleiro + Jogadores)
                 </label>
                 <select
                   id="edit-lineSize"
@@ -616,10 +744,10 @@ async function AdminMatchView({ params }: { params: Promise<{ id: string }> }) {
                   defaultValue={match.lineSize}
                   className="w-full border-2 border-moss bg-paper px-3 py-2 text-xs text-moss outline-none font-semibold"
                 >
-                  <option value="3">1 goleiro + 3 linha (4 por time)</option>
-                  <option value="4">1 goleiro + 4 linha (5 por time)</option>
-                  <option value="5">1 goleiro + 5 linha (6 por time - Ideal)</option>
-                  <option value="6">1 goleiro + 6 linha (7 por time)</option>
+                  <option value="3">1 goleiro + 3 jogadores (4 por time)</option>
+                  <option value="4">1 goleiro + 4 jogadores (5 por time)</option>
+                  <option value="5">1 goleiro + 5 jogadores (6 por time - Ideal)</option>
+                  <option value="6">1 goleiro + 6 jogadores (7 por time)</option>
                 </select>
               </div>
 

@@ -6,6 +6,7 @@ import { ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { TEAM_META, isTeam, teamsFor } from "@/lib/teams";
 import { VoteForm } from "@/components/vote-form";
+import { VoterSelector } from "@/components/voter-selector";
 import { Loading, TeamDot } from "@/components/ui";
 
 async function VoteView({
@@ -25,7 +26,13 @@ async function VoteView({
 
   const order = teamsFor(match.numTeams) as string[];
   const people = match.attendances
-    .map((a) => ({ id: a.playerId, name: a.player.name, team: a.team, isGoalkeeper: a.asGoalkeeper }))
+    .map((a) => ({
+      id: a.playerId,
+      name: a.player.name,
+      team: a.team,
+      isGoalkeeper: a.asGoalkeeper,
+      hasPin: Boolean(a.player.pin),
+    }))
     .sort((a, b) => order.indexOf(a.team ?? "") - order.indexOf(b.team ?? "") || a.name.localeCompare(b.name));
 
   if (!match.votingOpen) {
@@ -43,6 +50,13 @@ async function VoteView({
     );
   }
 
+  const votesInMatch = await db.vote.findMany({
+    where: { matchId: match.id },
+    select: { voterId: true },
+    distinct: ["voterId"],
+  });
+  const votedIds = new Set(votesInMatch.map((v) => v.voterId));
+
   const voterId = typeof sp.jogador === "string" ? sp.jogador : undefined;
   const voter = people.find((p) => p.id === voterId);
 
@@ -54,28 +68,35 @@ async function VoteView({
           <p className="mt-1 text-xs text-moss-soft">Selecione seu nome para abrir a cédula de votação.</p>
         </div>
 
-        <ul className="border-[3px] border-moss bg-paper shadow-hard divide-y-2 divide-dashed divide-moss/30">
-          {people.map((p) => {
-            const meta = isTeam(p.team) ? TEAM_META[p.team] : null;
-            return (
-              <li key={p.id}>
-                <Link
-                  href={`/votar/${token}?jogador=${p.id}`}
-                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-paper-dark"
-                  id={`eu-sou-${p.id}`}
-                >
-                  <span className={`size-3 shrink-0 border-2 border-moss ${meta?.swatch ?? "bg-paper"}`} aria-hidden="true" />
-                  <span className="flex-1 font-serif text-lg leading-tight">{p.name}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-moss-soft">
-                    {meta?.label}
-                  </span>
-                  <ChevronRight className="size-4 text-moss-soft" aria-hidden="true" />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <VoterSelector
+          token={token}
+          people={people.map((p) => ({
+            id: p.id,
+            name: p.name,
+            team: p.team,
+            hasVoted: votedIds.has(p.id),
+            hasPin: p.hasPin,
+          }))}
+        />
       </section>
+    );
+  }
+
+  if (voter && votedIds.has(voter.id)) {
+    return (
+      <div className="border-[3px] border-moss bg-paper p-6 text-center shadow-hard flex flex-col items-center gap-3">
+        <span className="text-3xl">✓</span>
+        <h2 className="font-serif text-2xl">Voto Já Registrado</h2>
+        <p className="text-xs text-moss-soft max-w-sm">
+          <strong>{voter.name}</strong>, sua avaliação para esta partida já foi registrada e não é possível votar novamente.
+        </p>
+        <Link
+          href={`/votar/${token}`}
+          className="mt-2 inline-flex items-center border-2 border-moss bg-paper-dark px-4 py-2 text-xs font-bold uppercase tracking-wider shadow-hard-sm"
+        >
+          Voltar à Lista de Jogadores
+        </Link>
+      </div>
     );
   }
 

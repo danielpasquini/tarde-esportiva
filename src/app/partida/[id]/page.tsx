@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { db } from "@/lib/db";
 import { getMatch } from "@/lib/match";
 import { formatMatchDate } from "@/lib/format";
 import { teamsFor, TEAM_META, type TeamKey } from "@/lib/teams";
@@ -15,7 +16,12 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
   const match = await getMatch(id);
   if (!match) notFound();
 
-  const matchTeams = teamsFor(match.numTeams);
+  const [votesCount, matchTeams] = await Promise.all([
+    db.vote.count({ where: { matchId: match.id } }),
+    Promise.resolve(teamsFor(match.numTeams)),
+  ]);
+
+  const showTop5 = match.status === "FINISHED" || votesCount > 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -30,7 +36,7 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
             {(match.location || match.cost != null) && (
               <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-moss font-semibold">
                 {match.location && <span>📍 {match.location}</span>}
-                {match.cost != null && <span>💰 R$ {match.cost.toFixed(2).replace(".", ",")} por atleta</span>}
+                {match.cost != null && <span>💰 R$ {match.cost.toFixed(2).replace(".", ",")} por jogador</span>}
               </div>
             )}
           </div>
@@ -47,9 +53,9 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
                 />
               ))}
             </span>
-            <span>{match.numTeams} times × {match.lineSize} na linha</span>
+            <span>{match.numTeams} times × {match.lineSize} jogadores</span>
           </div>
-          <span>{match.attendances.length} atletas confirmados</span>
+          <span>{match.attendances.length} jogadores confirmados</span>
         </div>
       </header>
 
@@ -67,13 +73,13 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
         </Link>
       )}
 
-      {/* Imagem e Destaques do Jogador do Dia (Quando votação encerrada) */}
-      {match.status === "FINISHED" && (
+      {/* Imagem e Destaques do Jogador do Dia / Top 5 */}
+      {showTop5 && (
         <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
           <div className="flex items-center justify-between border-b-2 border-moss/20 pb-2">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Pós-Jogo</span>
-              <h2 className="font-serif text-2xl">Destaques da Rodada</h2>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Destaques</span>
+              <h2 className="font-serif text-2xl">Top 5 da Rodada</h2>
             </div>
             <a
               href={`/api/partida/${match.id}/destaques`}

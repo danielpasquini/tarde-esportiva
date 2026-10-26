@@ -1,28 +1,48 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { connection } from "next/server";
-import { Star } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { db } from "@/lib/db";
+import { isAdmin } from "@/lib/auth";
 import { formatShortDate } from "@/lib/format";
-import { formatRating } from "@/lib/rating";
-import { TeamName, Empty, Loading, GloveBadge } from "@/components/ui";
+import { TeamName, Empty, Loading } from "@/components/ui";
+import { HistoryPlayersList, type PlayerHistoryItem } from "@/components/history-players-list";
 
 export const metadata = { title: "Histórico" };
 
 async function History() {
   await connection();
-  const [matches, players] = await Promise.all([
+  const isOrganizer = await isAdmin();
+
+  const [finishedMatches, allMatchesFallback, allMatchesList, players] = await Promise.all([
     db.match.findMany({
       where: { status: "FINISHED" },
       orderBy: { date: "desc" },
-      include: { games: { orderBy: { createdAt: "asc" } }, _count: { select: { attendances: true } } },
+      take: 5,
+      include: {
+        games: { orderBy: { createdAt: "asc" } },
+        _count: { select: { attendances: true } },
+      },
+    }),
+    db.match.findMany({
+      orderBy: { date: "desc" },
+      take: 5,
+      include: {
+        games: { orderBy: { createdAt: "asc" } },
+        _count: { select: { attendances: true } },
+      },
+    }),
+    db.match.findMany({
+      orderBy: { date: "desc" },
+      select: {
+        id: true,
+        date: true,
+      },
     }),
     db.player.findMany({
       where: { active: true },
-      orderBy: [{ baseRating: "desc" }, { name: "asc" }],
       include: {
         attendances: {
-          where: { match: { status: "FINISHED" } },
           include: { match: true },
           orderBy: { match: { date: "desc" } },
         },
@@ -33,182 +53,136 @@ async function History() {
     }),
   ]);
 
-  // Agrupar média de votos recebidos por jogador e partida
-  const playerMatchHistory = new Map<
-    string,
-    { matchId: string; date: Date; avg: number | null; team: string | null }[]
-  >();
+  const recentMatches = finishedMatches.length > 0 ? finishedMatches : allMatchesFallback;
 
-  for (const p of players) {
-    const map = new Map<string, { date: Date; scores: number[]; team: string | null }>();
-    for (const att of p.attendances) {
-      if (att.match) {
-        map.set(att.matchId, { date: att.match.date, scores: [], team: att.team });
+  // Montar histórico de partidas e participações com notas
+  const playersData: PlayerHistoryItem[] = players
+    .map((p) => {
+      const attendanceMap: Record<string, { team: string | null; avg: number | null }> = {};
+
+      const scoreMap: Record<string, number[]> = {};
+      for (const v of p.votesGot) {
+        if (!scoreMap[v.matchId]) scoreMap[v.matchId] = [];
+        scoreMap[v.matchId].push(v.score);
       }
-    }
-    for (const v of p.votesGot) {
-      if (v.match && v.match.status === "FINISHED") {
-        if (!map.has(v.matchId)) {
-          map.set(v.matchId, { date: v.match.date, scores: [v.score], team: null });
-        } else {
-          map.get(v.matchId)!.scores.push(v.score);
+
+      for (const att of p.attendances) {
+        if (att.team != null && !att.isUnavailable) {
+          const scores = scoreMap[att.matchId] || [];
+          const avg = scores.length
+            ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
+            : null;
+          attendanceMap[att.matchId] = { team: att.team, avg };
         }
       }
-    }
-    const historyList = Array.from(map.entries())
-      .map(([matchId, data]) => {
-        const avg = data.scores.length
-          ? Math.round((data.scores.reduce((a, b) => a + b, 0) / data.scores.length) * 10) / 10
-          : null;
-        return { matchId, date: data.date, avg, team: data.team };
-      })
-      .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-    playerMatchHistory.set(p.id, historyList);
-  }
+      const timesPlayed = Object.keys(attendanceMap).length;
+
+      return {
+        id: p.id,
+        name: p.name,
+        isGoalkeeper: p.isGoalkeeper,
+        baseRating: p.baseRating,
+        timesPlayed,
+        hasPin: !!p.pin,
+        isPublic: p.isPublic,
+        attendanceMap,
+      };
+    })
+    .sort((a, b) => b.timesPlayed - a.timesPlayed || a.name.localeCompare(b.name));
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Tabela de Classificação Técnica */}
+      {/* 1) Card dos Últimos 5 Jogos Jogados para clicar e entrar na Página Pública */}
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between border-b-2 border-moss pb-1">
-          <h2 className="font-serif text-2xl">Média dos Jogadores</h2>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Histórico Recente</span>
+            <h2 className="font-serif text-2xl">Últimos 5 Jogos</h2>
+          </div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-moss-soft">
-            {players.length} atletas
+            {recentMatches.length} {recentMatches.length === 1 ? "partida" : "partidas"}
           </span>
         </div>
 
-        {players.length ? (
+        {recentMatches.length ? (
           <ul className="flex flex-col gap-3">
-            {players.map((p, i) => {
-              const matchesPlayed = playerMatchHistory.get(p.id) ?? [];
-              return (
-                <li key={p.id} className="border-[3px] border-moss bg-paper shadow-hard">
-                  <details className="group">
-                    <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer bg-paper hover:bg-paper-dark transition-colors list-none">
-                      <span className="w-6 font-serif text-lg text-moss-soft tabular-nums">
-                        {i + 1}º
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-sm truncate">{p.name}</span>
-                          {p.isGoalkeeper && <GloveBadge />}
-                        </div>
-                        <p className="text-[10px] uppercase font-bold text-moss-soft tracking-wider flex items-center gap-1.5 mt-0.5">
-                          <span>
-                            {matchesPlayed.length} {matchesPlayed.length === 1 ? "partida" : "partidas"}
-                          </span>
-                          <span className="text-moss/40">•</span>
-                          <span className="text-brick group-open:hidden underline">Ver partidas</span>
-                          <span className="text-brick hidden group-open:inline underline">Ocultar</span>
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 border-2 border-moss bg-paper-dark px-2.5 py-1 shadow-hard-sm shrink-0">
-                        <Star className="size-3.5 fill-brick text-brick" />
-                        <span className="font-serif text-base font-bold text-moss tabular-nums">
-                          {formatRating(p.baseRating)}
-                        </span>
-                      </div>
-                    </summary>
-
-                    <div className="border-t-2 border-moss bg-paper-dark p-3">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-moss-soft mb-2">
-                        Histórico de Notas por Partida
-                      </p>
-                      {matchesPlayed.length ? (
-                        <div className="flex flex-col divide-y divide-moss/15 border border-moss/30 bg-paper">
-                          {matchesPlayed.map((m) => (
-                            <Link
-                              key={m.matchId}
-                              href={`/partida/${m.matchId}`}
-                              className="flex items-center justify-between px-3 py-2 text-xs hover:bg-paper-dark/60 transition-colors"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-moss">{formatShortDate(m.date)}</span>
-                                {m.team && (
-                                  <span className="text-[10px] uppercase font-bold text-moss-soft">
-                                    ({m.team})
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1 font-mono font-bold text-moss">
-                                {m.avg != null ? (
-                                  <>
-                                    <Star className="size-3 fill-brick text-brick" />
-                                    <span>{m.avg.toFixed(1).replace(".", ",")}</span>
-                                  </>
-                                ) : (
-                                  <span className="text-moss-soft font-normal text-[11px]">Sem votos</span>
-                                )}
-                              </div>
-                            </Link>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-moss-soft italic">Nenhuma partida finalizada registrada.</p>
-                      )}
-                    </div>
-                  </details>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <Empty>Nenhum jogador cadastrado.</Empty>
-        )}
-      </section>
-
-      {/* Partidas Anteriores */}
-      <section className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between border-b-2 border-moss pb-1">
-          <h2 className="font-serif text-2xl">Partidas Anteriores</h2>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-moss-soft">
-            {matches.length}
-          </span>
-        </div>
-
-        {matches.length ? (
-          <ul className="flex flex-col gap-4">
-            {matches.map((m) => (
+            {recentMatches.map((m) => (
               <li key={m.id}>
                 <Link
                   href={`/partida/${m.id}`}
-                  className="block border-[3px] border-moss bg-paper shadow-hard transition-transform active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                  className="block border-[3px] border-moss bg-paper shadow-hard hover:bg-paper-dark/30 transition-all active:translate-x-0.5 active:translate-y-0.5 group"
                   id={`historico-${m.id}`}
                 >
                   <div className="flex items-center justify-between border-b-2 border-moss bg-paper-dark px-4 py-2.5">
-                    <span className="font-serif text-lg font-bold">{formatShortDate(m.date)}</span>
-                    <span className="text-xs font-semibold text-moss-soft">
-                      {m.numTeams} times · {m._count.attendances} atletas
+                    <span className="font-serif text-lg font-bold text-moss">{formatShortDate(m.date)}</span>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-moss group-hover:underline">
+                      Página Pública <ArrowUpRight className="size-3.5 text-moss" />
                     </span>
                   </div>
-                  {m.games.length ? (
-                    <div className="divide-y divide-moss/20 p-2">
-                      {m.games.map((g) => (
-                        <div key={g.id} className="grid grid-cols-3 items-center py-1.5 px-2 text-center text-sm font-semibold">
-                          <div className="text-left">
-                            <TeamName team={g.teamA} />
+                  <div className="p-3">
+                    {m.games.length ? (
+                      <div className="divide-y divide-moss/20">
+                        {m.games.map((g) => (
+                          <div key={g.id} className="grid grid-cols-3 items-center py-1.5 px-2 text-center text-xs font-semibold">
+                            <div className="text-left truncate">
+                              <TeamName team={g.teamA} />
+                            </div>
+                            <div>
+                              <span className="font-serif text-base font-bold bg-moss text-paper px-2 py-0.5 rounded-sm">
+                                {g.scoreA} × {g.scoreB}
+                              </span>
+                            </div>
+                            <div className="text-right truncate">
+                              <TeamName team={g.teamB} />
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-serif text-xl font-bold bg-moss text-paper px-2 py-0.5 rounded-sm">
-                              {g.scoreA} × {g.scoreB}
-                            </span>
-                          </div>
-                          <div className="text-right">
-                            <TeamName team={g.teamB} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="p-3 text-xs text-moss-soft text-center">Partida sem placares registrados.</p>
-                  )}
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between text-xs text-moss-soft py-1">
+                        <span>{m.numTeams} equipes</span>
+                        <span>{m._count.attendances} jogadores confirmados</span>
+                      </div>
+                    )}
+                  </div>
                 </Link>
               </li>
             ))}
           </ul>
         ) : (
           <Empty>Nenhuma partida encerrada ainda.</Empty>
+        )}
+      </section>
+
+      {/* 2) Card: Jogadores (ordenados por número de vezes que jogou, sem notas para usuário, notas em estrelas/decimais para organizador) */}
+      <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
+        <div className="flex items-center justify-between border-b-2 border-moss pb-2">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">
+              {isOrganizer ? "Elenco • Modo Organizador" : "Elenco da Tarde"}
+            </span>
+            <h2 className="font-serif text-2xl">Jogadores</h2>
+          </div>
+          <span className="text-xs font-mono font-bold text-moss-soft">
+            {playersData.length} jogadores
+          </span>
+        </div>
+
+        {isOrganizer && (
+          <p className="text-xs text-moss-soft bg-paper-dark p-2.5 border border-moss/20">
+            🔒 <strong>Visão do Organizador:</strong> Você pode visualizar a média geral (estrelas) e as notas de cada partida (decimais). Para os demais usuários, as notas são ocultas.
+          </p>
+        )}
+
+        {playersData.length ? (
+          <HistoryPlayersList
+            players={playersData}
+            allMatches={allMatchesList.map((m) => ({ id: m.id, date: m.date }))}
+            isOrganizer={isOrganizer}
+          />
+        ) : (
+          <Empty>Nenhum jogador cadastrado.</Empty>
         )}
       </section>
     </div>

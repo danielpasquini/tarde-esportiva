@@ -306,15 +306,17 @@ export async function removeAttendance(matchId: string, attendanceId: string) {
 
 /* ---------- Sorteio e remanejamento ---------- */
 
-export async function drawTeams(matchId: string) {
+export async function drawTeams(matchId: string, formData?: FormData) {
   await requireAdmin();
   const match = await getMatch(matchId);
   if (!match || match.status === "FINISHED") return;
 
+  const fixedGkParam = formData ? str(formData, "fixedGk") !== "false" : true;
+
   const candidates = match.attendances.map((a) => ({
     playerId: a.playerId,
     rating: a.player.baseRating,
-    isGoalkeeper: a.player.isGoalkeeper,
+    isGoalkeeper: fixedGkParam ? a.player.isGoalkeeper : false,
   }));
   const ratingOf = new Map(candidates.map((c) => [c.playerId, c.rating]));
   const { goalkeepers, line } = splitRoster(candidates, match.numTeams, match.lineSize);
@@ -350,6 +352,37 @@ export async function drawTeams(matchId: string) {
   touch(matchId);
 }
 
+export async function toggleFixedGkMode(matchId: string) {
+  await requireAdmin();
+  const match = await getMatch(matchId);
+  if (!match || match.status !== "DRAWN") return;
+
+  const hasAnyGk = match.attendances.some((a) => a.asGoalkeeper);
+
+  if (hasAnyGk) {
+    // Desativa goleiros fixos: todos viram jogadores normais
+    await db.attendance.updateMany({
+      where: { matchId },
+      data: { asGoalkeeper: false },
+    });
+  } else {
+    // Ativa goleiros fixos: jogadores cadastrados como goleiro viram fixos
+    const gkAttendances = match.attendances.filter((a) => a.player.isGoalkeeper && a.team);
+    const usedTeams = new Set<string>();
+    for (const att of gkAttendances) {
+      if (att.team && !usedTeams.has(att.team)) {
+        usedTeams.add(att.team);
+        await db.attendance.update({
+          where: { id: att.id },
+          data: { asGoalkeeper: true },
+        });
+      }
+    }
+  }
+
+  touch(matchId);
+}
+
 export async function reopenList(matchId: string) {
   await requireAdmin();
   const match = await db.match.findUnique({ where: { id: matchId } });
@@ -372,7 +405,7 @@ export async function reopenList(matchId: string) {
   touch(matchId);
 }
 
-/** Marca ou desmarca atleta como indisponível (por atraso ou lesão) */
+/** Marca ou desmarca jogador como indisponível */
 export async function togglePlayerUnavailable(matchId: string, attendanceId: string, reason?: string) {
   await requireAdmin();
   const att = await db.attendance.findFirst({ where: { id: attendanceId, matchId } });
@@ -383,8 +416,7 @@ export async function togglePlayerUnavailable(matchId: string, attendanceId: str
     where: { id: att.id },
     data: {
       isUnavailable: newUnavailable,
-      unavailableReason: newUnavailable ? (reason || "Atraso/Lesão") : null,
-      // Se indisponível, não pode figurar como emprestado para outro time
+      unavailableReason: newUnavailable ? (reason || "Indisponível") : null,
       borrowedToTeam: newUnavailable ? null : att.borrowedToTeam,
     },
   });
@@ -393,8 +425,9 @@ export async function togglePlayerUnavailable(matchId: string, attendanceId: str
 
 /**
  * Microreorganização balanceada:
- * Se houver desfalques (atraso/lesão) ou falta de atletas para o formato da partida (lineSize),
- * pega emprestado atletas de outras equipes de forma equilibrada pelas notas.
+ * Se houver desfalques ou diferença de jogadores:
+ * É estritamente proibido que um time tenha 6 jogadores (contando o goleiro, fixo ou não) e outro 7.
+ * O balanceamento se dará por empréstimo do time que não está jogando.
  */
 export async function microReorganize(matchId: string) {
   await requireAdmin();
@@ -402,28 +435,28 @@ export async function microReorganize(matchId: string) {
   if (!match || match.status !== "DRAWN") return;
 
   const validTeams = teamsFor(match.numTeams) as string[];
-  const linePlayers = match.attendances.filter(
-    (a) => a.team && !a.asGoalkeeper && validTeams.includes(a.team)
+  const matchPlayers = match.attendances.filter(
+    (a) => a.team && validTeams.includes(a.team)
   );
 
   const unavailableIds = new Set(
     match.attendances.filter((a) => a.isUnavailable).map((a) => a.playerId)
   );
 
-  const assignments: Assignment[] = linePlayers.map((a) => ({
+  const assignments: Assignment[] = matchPlayers.map((a) => ({
     playerId: a.playerId,
     team: a.team!,
-    asGoalkeeper: false,
+    asGoalkeeper: a.asGoalkeeper,
     borrowedToTeam: null,
   }));
 
-  const allLineCandidates: Candidate[] = linePlayers.map((a) => ({
+  const allCandidates: Candidate[] = matchPlayers.map((a) => ({
     playerId: a.playerId,
     rating: a.ratingAtDraw ?? a.player.baseRating,
-    isGoalkeeper: false,
+    isGoalkeeper: a.asGoalkeeper,
   }));
 
-  balanceWithBorrows(validTeams, assignments, allLineCandidates, match.lineSize, unavailableIds);
+  balanceWithBorrows(validTeams, assignments, allCandidates, match.lineSize, unavailableIds);
 
   await db.$transaction([
     db.attendance.updateMany({
@@ -439,6 +472,138 @@ export async function microReorganize(matchId: string) {
         })
       ),
   ]);
+
+  touch(matchId);
+}
+
+/**
+ * Plano B: Reorganização definitiva pequena nos times e goleiros.
+ * Regra Estrita: É estritamente proibido que um time tenha 6 jogadores (contando o goleiro, fixo ou não) e outro tenha 7.
+ * O balanceamento se dará por empréstimo do time que não está jogando,
+ * ou por tirar um goleiro fixo (definido previamente via sorteio), e um jogador toma lugar de goleiro.
+ */
+export async function planBReorganize(matchId: string) {
+  await requireAdmin();
+  const match = await getMatch(matchId);
+  if (!match || match.status !== "DRAWN") return;
+
+  const validTeams = teamsFor(match.numTeams) as string[];
+
+  // 1. Ajuste de goleiros caso haja times desfalcados de goleiro fixo
+  const hasFixedGk = match.attendances.some((a) => a.asGoalkeeper);
+  if (hasFixedGk) {
+    for (const team of validTeams) {
+      const hasKeeper = match.attendances.some((a) => a.team === team && a.asGoalkeeper && !a.isUnavailable);
+      if (!hasKeeper) {
+        // Se outro time tem goleiro extra, remaneja
+        const donorKeeper = match.attendances.find((a) => a.team !== team && a.asGoalkeeper && !a.isUnavailable);
+        if (donorKeeper) {
+          await db.attendance.update({
+            where: { id: donorKeeper.id },
+            data: { team, borrowedToTeam: null },
+          });
+          donorKeeper.team = team;
+        } else {
+          // "um jogador toma lugar de goleiro"
+          const candidatePlayer = match.attendances.find((a) => a.team === team && !a.isUnavailable);
+          if (candidatePlayer) {
+            await db.attendance.update({
+              where: { id: candidatePlayer.id },
+              data: { asGoalkeeper: true },
+            });
+            candidatePlayer.asGoalkeeper = true;
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Rebalanceamento permanente contando o goleiro (fixo ou não)
+  const getTotalTeamCount = (t: string) =>
+    match.attendances.filter((a) => a.team === t && !a.isUnavailable).length;
+
+  let minTeam = validTeams.reduce((min, t) => (getTotalTeamCount(t) < getTotalTeamCount(min) ? t : min), validTeams[0]);
+  let maxTeam = validTeams.reduce((max, t) => (getTotalTeamCount(t) > getTotalTeamCount(max) ? t : max), validTeams[0]);
+
+  while (getTotalTeamCount(maxTeam) - getTotalTeamCount(minTeam) >= 2) {
+    const donorPlayers = match.attendances.filter(
+      (a) => a.team === maxTeam && !a.asGoalkeeper && !a.isUnavailable
+    );
+    if (!donorPlayers.length) break;
+
+    donorPlayers.sort((a, b) => (b.ratingAtDraw ?? b.player.baseRating) - (a.ratingAtDraw ?? a.player.baseRating));
+    const chosen = donorPlayers[Math.floor(donorPlayers.length / 2)] ?? donorPlayers[0];
+
+    await db.attendance.update({
+      where: { id: chosen.id },
+      data: { team: minTeam, borrowedToTeam: null },
+    });
+    chosen.team = minTeam;
+
+    minTeam = validTeams.reduce((min, t) => (getTotalTeamCount(t) < getTotalTeamCount(min) ? t : min), validTeams[0]);
+    maxTeam = validTeams.reduce((max, t) => (getTotalTeamCount(t) > getTotalTeamCount(max) ? t : max), validTeams[0]);
+  }
+
+  // Se houver 2 times e a contagem for diferente (ex: 5 vs 6, ou 6 vs 7):
+  // Regra Estrita: Não pode haver um número diferente em cada time!
+  // O balanceamento se dará por tirar um goleiro fixo (definido previamente via sorteio), e um jogador toma lugar de goleiro.
+  if (
+    validTeams.length === 2 &&
+    getTotalTeamCount(maxTeam) !== getTotalTeamCount(minTeam)
+  ) {
+    const fixedGks = match.attendances.filter((a) => a.asGoalkeeper && !a.isUnavailable);
+    if (fixedGks.length >= 2) {
+      // Sorteia qual goleiro fixo perde o posto
+      const chosenGkToRemove = fixedGks[Math.floor(Math.random() * fixedGks.length)];
+      await db.attendance.update({
+        where: { id: chosenGkToRemove.id },
+        data: { asGoalkeeper: false, team: null },
+      });
+      chosenGkToRemove.asGoalkeeper = false;
+      chosenGkToRemove.team = null;
+
+      // Um jogador toma lugar de goleiro no outro time
+      const playerForGk = match.attendances.find(
+        (a) => a.team !== chosenGkToRemove.team && !a.asGoalkeeper && !a.isUnavailable
+      );
+      if (playerForGk) {
+        await db.attendance.update({
+          where: { id: playerForGk.id },
+          data: { asGoalkeeper: true },
+        });
+        playerForGk.asGoalkeeper = true;
+      }
+    } else {
+      // Se não há 2 goleiros fixos, remove o jogador excedente do time maior para manter paridade absoluta
+      const donor = match.attendances.find(
+        (a) => a.team === maxTeam && !a.asGoalkeeper && !a.isUnavailable
+      );
+      if (donor) {
+        await db.attendance.update({
+          where: { id: donor.id },
+          data: { team: null, borrowedToTeam: null },
+        });
+        donor.team = null;
+      }
+    }
+  }
+
+  // Limpa empréstimos temporários para manter a reorganização limpa
+  await db.attendance.updateMany({
+    where: { matchId },
+    data: { borrowedToTeam: null },
+  });
+
+  // Se houver 3+ times e qualquer time tiver menos que o máximo (ex: 6 vs 7):
+  // "o balanceamento se dará por empréstimo do time que não está jogando"
+  if (validTeams.length >= 3) {
+    const maxCount = Math.max(...validTeams.map(getTotalTeamCount));
+    const minCount = Math.min(...validTeams.map(getTotalTeamCount));
+    if (maxCount !== minCount) {
+      await microReorganize(matchId);
+      return;
+    }
+  }
 
   touch(matchId);
 }
@@ -543,4 +708,19 @@ export async function closeVoting(matchId: string) {
   ]);
   touch(matchId);
   revalidatePath("/historico");
+}
+
+export async function resetPlayerPin(playerId: string) {
+  await requireAdmin();
+  const player = await db.player.findUnique({ where: { id: playerId } });
+  if (!player) return;
+
+  await db.player.update({
+    where: { id: playerId },
+    data: { pin: null },
+  });
+
+  revalidatePath(`/admin/jogadores`);
+  revalidatePath(`/perfil/${playerId}`);
+  revalidatePath(`/historico`);
 }

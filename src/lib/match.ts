@@ -46,15 +46,17 @@ export type TeamRoster = {
 export function byTeams(match: MatchFull) {
   const validTeams = teamsFor(match.numTeams);
   const confirmedGoalkeepers = match.attendances.filter(
-    (a) => a.team && (a.asGoalkeeper || a.player.isGoalkeeper)
+    (a) => a.team && a.asGoalkeeper
   );
 
-  let fixedGkMode: "TWO_FIXED" | "ONE_FIXED" | "NONE" = "NONE";
+  let fixedGkMode: "TWO_FIXED" | "ONE_FIXED" | "ALL_FIXED" | "NONE" = "NONE";
   let fieldGkA: AttendanceFull | null = null;
   let fieldGkB: AttendanceFull | null = null;
   let singleFixedGk: AttendanceFull | null = null;
 
-  if (confirmedGoalkeepers.length >= 2) {
+  if (confirmedGoalkeepers.length >= match.numTeams) {
+    fixedGkMode = "ALL_FIXED";
+  } else if (confirmedGoalkeepers.length >= 2) {
     fixedGkMode = "TWO_FIXED";
     fieldGkA = confirmedGoalkeepers[0];
     fieldGkB = confirmedGoalkeepers[1];
@@ -69,26 +71,40 @@ export function byTeams(match: MatchFull) {
     // Goleiro fixo do time (se houver)
     const keeper = players.find((p) => p.asGoalkeeper) ?? null;
 
-    // Jogadores de linha deste time
+    // Jogadores deste time
     const lineAll = players.filter((p) => !p.asGoalkeeper);
     const unavailablePlayers = lineAll.filter((p) => p.isUnavailable);
-    const activeLine = lineAll.filter((p) => !p.isUnavailable);
+    // Ordenados por nota/estrelas decrescente
+    const activeLine = lineAll
+      .filter((p) => !p.isUnavailable)
+      .sort(
+        (a, b) =>
+          (b.ratingAtDraw ?? b.player.baseRating) -
+          (a.ratingAtDraw ?? a.player.baseRating)
+      );
 
-    // Atletas emprestados DE OUTROS TIMES para jogar neste time
-    const borrowedIn = match.attendances.filter(
-      (a) => a.team !== team && a.borrowedToTeam === team && !a.isUnavailable
+    // Jogadores emprestados DE OUTROS TIMES para jogar neste time (ordenados por nota)
+    const borrowedIn = match.attendances
+      .filter(
+        (a) => a.team !== team && a.borrowedToTeam === team && !a.isUnavailable
+      )
+      .sort(
+        (a, b) =>
+          (b.ratingAtDraw ?? b.player.baseRating) -
+          (a.ratingAtDraw ?? a.player.baseRating)
+      );
+
+    // Jogadores deste time que jogam emprestados para outro time
+    const borrowedOut = players.filter(
+      (a) => a.borrowedToTeam != null && a.borrowedToTeam !== team
     );
 
-    // Atletas deste time que jogam emprestados para outro time
-    const borrowedOut = players.filter((a) => a.borrowedToTeam != null && a.borrowedToTeam !== team);
-
-    // Força total da linha (titulares ativos + atletas emprestados)
+    // Força total (titulares ativos + jogadores emprestados)
     const strength = [...activeLine, ...borrowedIn].reduce(
       (sum, p) => sum + (p.ratingAtDraw ?? p.player.baseRating),
       0
     );
 
-    // Time que descansa para fornecer goleiro quando for ONE_FIXED e este time não tiver goleiro fixo
     let restingTeamForGk: string | undefined;
     if (fixedGkMode === "ONE_FIXED" && !keeper) {
       const otherTeamsWithoutGk = validTeams.filter(

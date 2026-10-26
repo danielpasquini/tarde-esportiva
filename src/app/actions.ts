@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { normalizeScore } from "@/lib/rating";
 
@@ -49,6 +50,13 @@ export async function submitVotes(
   const played = new Set(match.attendances.map((a) => a.playerId));
   if (!played.has(voterId)) return { ok: false, error: "Jogador não encontrado nesta partida." };
 
+  const alreadyVoted = await db.vote.findFirst({
+    where: { matchId: match.id, voterId },
+  });
+  if (alreadyVoted) {
+    return { ok: false, error: "Você já enviou seu voto para esta partida e não pode votar novamente." };
+  }
+
   const clean = new Map<string, number>();
   for (const v of Array.isArray(votes) ? votes : []) {
     const score = normalizeScore(Number(v?.score));
@@ -68,4 +76,74 @@ export async function submitVotes(
   );
   revalidatePath(`/votar/${token}`);
   return { ok: true, saved: clean.size };
+}
+
+export async function setPlayerPin(
+  playerId: string,
+  pin: string
+): Promise<{ ok: boolean; error?: string }> {
+  const cleanPin = pin.trim();
+  if (cleanPin.length !== 4 || !/^\d{4}$/.test(cleanPin)) {
+    return { ok: false, error: "O PIN deve conter exatamente 4 números." };
+  }
+  const player = await db.player.findUnique({ where: { id: playerId } });
+  if (!player) return { ok: false, error: "Jogador não encontrado." };
+
+  await db.player.update({
+    where: { id: playerId },
+    data: { pin: cleanPin },
+  });
+
+  const cookieStore = await cookies();
+  cookieStore.set(`player_pin_${playerId}`, cleanPin, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30, // 30 dias
+  });
+
+  revalidatePath(`/perfil/${playerId}`);
+  revalidatePath(`/historico`);
+  return { ok: true };
+}
+
+export async function verifyPlayerPin(
+  playerId: string,
+  pin: string
+): Promise<{ ok: boolean; error?: string }> {
+  const cleanPin = pin.trim();
+  const player = await db.player.findUnique({ where: { id: playerId } });
+  if (!player) return { ok: false, error: "Jogador não encontrado." };
+  if (!player.pin) return { ok: true };
+
+  if (player.pin !== cleanPin) {
+    return {
+      ok: false,
+      error: "PIN incorreto. Se você esqueceu seu PIN, peça para o organizador resetá-lo.",
+    };
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(`player_pin_${playerId}`, cleanPin, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+
+  return { ok: true };
+}
+
+export async function togglePlayerPublic(
+  playerId: string
+): Promise<{ ok: boolean; isPublic?: boolean }> {
+  const player = await db.player.findUnique({ where: { id: playerId } });
+  if (!player) return { ok: false };
+  const updated = await db.player.update({
+    where: { id: playerId },
+    data: { isPublic: !player.isPublic },
+  });
+  revalidatePath(`/perfil/${playerId}`);
+  revalidatePath(`/historico`);
+  return { ok: true, isPublic: updated.isPublic };
 }
