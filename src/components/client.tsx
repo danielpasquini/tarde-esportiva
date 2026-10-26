@@ -32,13 +32,16 @@ export function SubmitButton({
   );
 }
 
-export function CopyLink({ url, id }: { url: string; id: string }) {
+export function CopyLink({ url, id, className }: { url: string; id: string; className?: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
       id={id}
       type="button"
-      className="flex w-full items-center justify-center gap-2 border-[3px] border-moss bg-paper-dark px-4 py-3 text-xs font-bold uppercase tracking-widest shadow-hard-sm transition-transform active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-moss"
+      className={cn(
+        "flex items-center justify-center gap-2 border-[3px] border-moss bg-paper-dark px-4 py-3 text-xs font-bold uppercase tracking-widest shadow-hard-sm transition-transform active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-moss",
+        className,
+      )}
       onClick={async () => {
         const full = new URL(url, window.location.origin).toString();
         if (navigator.share) {
