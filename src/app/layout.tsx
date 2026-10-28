@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
-import { DM_Serif_Display, Work_Sans } from "next/font/google";
+import { DM_Serif_Display, Work_Sans, Figtree } from "next/font/google";
 import { Star } from "lucide-react";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
 
 const dmSerif = DM_Serif_Display({
   subsets: ["latin"],
@@ -31,7 +34,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pt-BR" className={`${dmSerif.variable} ${workSans.variable}`}>
+    <html lang="pt-BR" className={cn(dmSerif.variable, workSans.variable, "font-sans", figtree.variable)}>
       <body className="antialiased min-h-dvh flex flex-col">
         {/* Header Elegante & Minimalista */}
         <header className="px-4 pt-5 pb-1 max-w-md mx-auto w-full">
