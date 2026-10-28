@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ArrowLeft, ArrowRight, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trophy, User } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatMatchDate } from "@/lib/format";
 import { GloveBadge, Loading, StatusStamp } from "@/components/ui";
@@ -10,19 +10,51 @@ import { GloveBadge, Loading, StatusStamp } from "@/components/ui";
 async function MatchView({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const { id } = await params;
-  const match = await db.match.findUnique({
-    where: { id },
-    include: {
-      attendances: {
-        include: { player: true },
-        orderBy: { player: { name: "asc" } },
+  const [match, averages] = await Promise.all([
+    db.match.findUnique({
+      where: { id },
+      include: {
+        attendances: {
+          include: { player: true },
+          orderBy: { player: { name: "asc" } },
+        },
       },
-    },
-  });
+    }),
+    db.vote.groupBy({
+      by: ["targetId"],
+      where: { matchId: id },
+      _avg: { score: true },
+      _count: { score: true },
+    }),
+  ]);
   if (!match) notFound();
 
-  const votesCount = await db.vote.count({ where: { matchId: match.id } });
-  const showTop5 = match.status === "FINISHED" || votesCount > 0;
+  const avgMap = new Map(averages.map((a) => [a.targetId, a._avg.score ?? 0]));
+  const countMap = new Map(averages.map((a) => [a.targetId, a._count.score ?? 0]));
+
+  const sortedRated = match.attendances
+    .map((att) => {
+      const rawAvg = avgMap.get(att.playerId) ?? 0;
+      const avg = Math.round(rawAvg * 10) / 10;
+      return {
+        id: att.playerId,
+        name: att.player.name,
+        isGoalkeeper: att.asGoalkeeper || att.player.isGoalkeeper,
+        avg,
+        votesCount: countMap.get(att.playerId) ?? 0,
+      };
+    })
+    .filter((p) => p.avg > 0)
+    .sort((a, b) => b.avg - a.avg || a.name.localeCompare(b.name));
+
+  const top5 = sortedRated.slice(0, 5).map((p) => ({
+    ...p,
+    rank: 1 + sortedRated.filter((other) => other.avg > p.avg).length,
+  }));
+
+  const showTop5 = match.status === "FINISHED" && top5.length > 0;
+  const winner = top5[0] ?? null;
+  const runnersUp = top5.slice(1);
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,33 +94,88 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
         </Link>
       )}
 
-      {/* Imagem e Destaques do Jogador do Dia / Top 5 */}
-      {showTop5 && (
-        <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
+      {/* Destaques da Rodada / Top 5 em UI de Tabela */}
+      {showTop5 && winner && (
+        <section className="border-[3px] border-moss bg-paper p-4 sm:p-5 shadow-hard flex flex-col gap-4">
           <div className="flex items-center justify-between border-b-2 border-moss/20 pb-2">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Destaques</span>
               <h2 className="font-serif text-2xl">Top 5 da Rodada</h2>
             </div>
-            <a
-              href={`/api/partida/${match.id}/destaques`}
-              target="_blank"
-              download={`craque-da-rodada-${match.id}.png`}
-              className="inline-flex items-center gap-1 border-2 border-moss bg-moss text-paper px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-moss-soft"
-            >
-              Baixar Imagem ↗
-            </a>
+            <Trophy className="size-5 text-brick" />
           </div>
 
-          <div className="overflow-hidden border-2 border-moss shadow-hard-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/api/partida/${match.id}/destaques`}
-              alt="Jogador do Dia e Top 5 da partida"
-              className="w-full h-auto object-cover"
-              loading="lazy"
-            />
+          {/* 1º Colocado em Destaque */}
+          <div className="border-2 border-moss bg-amber-400/15 p-3.5 shadow-hard-sm flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xl leading-none shrink-0" aria-label="Medalha de Ouro">
+                🥇
+              </span>
+              <div className="min-w-0">
+                <span className="block text-[9px] font-bold uppercase tracking-[0.2em] text-brick">
+                  Craque da Rodada • 1º Lugar
+                </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Link
+                    href={`/perfil/${winner.id}`}
+                    className="font-serif text-xl text-moss hover:text-brick hover:underline truncate"
+                  >
+                    {winner.name}
+                  </Link>
+                  {winner.isGoalkeeper && <GloveBadge />}
+                </div>
+              </div>
+            </div>
+
+            <div className="text-right shrink-0 border-l-2 border-moss/20 pl-3">
+              <span className="block text-[9px] font-bold uppercase tracking-wider text-moss-soft">Nota</span>
+              <span className="font-mono text-xl font-bold text-moss tabular-nums">
+                ★ {winner.avg.toFixed(1).replace(".", ",")}
+              </span>
+            </div>
           </div>
+
+          {/* Tabela com os 4 jogadores abaixo */}
+          {runnersUp.length > 0 && (
+            <div className="border-2 border-moss overflow-hidden">
+              <table className="w-full text-left text-xs bg-paper">
+                <thead className="bg-paper-dark border-b-2 border-moss uppercase tracking-wider text-[10px] text-moss-soft">
+                  <tr>
+                    <th className="py-2 px-3 w-12">#</th>
+                    <th className="py-2 px-3">Jogador</th>
+                    <th className="py-2 px-3 text-right">Nota</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-moss/20">
+                  {runnersUp.map((p) => {
+                    const medal = p.rank === 1 ? "🥇" : p.rank === 2 ? "🥈" : p.rank === 3 ? "🥉" : null;
+                    return (
+                      <tr key={p.id} className="hover:bg-paper-dark/40 transition-colors">
+                        <td className="py-2.5 px-3 font-mono font-bold text-moss-soft tabular-nums whitespace-nowrap">
+                          {p.rank}º
+                        </td>
+                        <td className="py-2.5 px-3 min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {medal && <span className="text-sm leading-none shrink-0">{medal}</span>}
+                            <Link
+                              href={`/perfil/${p.id}`}
+                              className="font-semibold text-moss hover:text-brick hover:underline truncate"
+                            >
+                              {p.name}
+                            </Link>
+                            {p.isGoalkeeper && <GloveBadge />}
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-moss tabular-nums whitespace-nowrap">
+                          ★ {p.avg.toFixed(1).replace(".", ",")}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <p className="text-[11px] text-moss-soft text-center italic">
             Apenas o Top 5 é revelado publicamente. O restante das avaliações é restrito ao organizador.

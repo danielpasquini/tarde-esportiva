@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { db } from "@/lib/db";
+import { isAdmin } from "@/lib/auth";
 import { VoteForm } from "@/components/vote-form";
 import { VoterSelector } from "@/components/voter-selector";
 import { Loading } from "@/components/ui";
@@ -27,6 +29,7 @@ async function VoteView({
       id: a.playerId,
       name: a.player.name,
       isGoalkeeper: a.asGoalkeeper || a.player.isGoalkeeper,
+      pin: a.player.pin,
       hasPin: Boolean(a.player.pin),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -56,7 +59,16 @@ async function VoteView({
   const voterId = typeof sp.jogador === "string" ? sp.jogador : undefined;
   const voter = people.find((p) => p.id === voterId);
 
-  if (!voter) {
+  // Verificar no servidor se o jogador tem PIN e se o cookie de PIN é válido
+  let isVoterPinVerified = true;
+  if (voter && voter.pin) {
+    const cookieStore = await cookies();
+    const cookiePin = cookieStore.get(`player_pin_${voter.id}`)?.value;
+    const organizer = await isAdmin();
+    isVoterPinVerified = organizer || (cookiePin != null && cookiePin === voter.pin);
+  }
+
+  if (!voter || !isVoterPinVerified) {
     return (
       <section className="flex flex-col gap-4">
         <div>
@@ -77,7 +89,7 @@ async function VoteView({
     );
   }
 
-  if (voter && votedIds.has(voter.id)) {
+  if (votedIds.has(voter.id)) {
     return (
       <div className="border-[3px] border-moss bg-paper p-6 text-center shadow-hard flex flex-col items-center gap-3">
         <span className="text-3xl">✓</span>

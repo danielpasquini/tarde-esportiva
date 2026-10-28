@@ -3,38 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
+import { isAdmin } from "@/lib/auth";
 import { normalizeScore } from "@/lib/rating";
 
-function touch(matchId: string) {
-  revalidatePath(`/partida/${matchId}`);
-  revalidatePath(`/admin/partida/${matchId}`);
-}
-
-export async function confirmPresence(matchId: string, formData: FormData) {
-  const playerId = String(formData.get("playerId") ?? "");
-  const [match, player] = await Promise.all([
-    db.match.findUnique({ where: { id: matchId } }),
-    db.player.findFirst({ where: { id: playerId, active: true } }),
-  ]);
-  if (!match || match.status === "FINISHED" || !player) return;
-  await db.attendance.upsert({
-    where: { matchId_playerId: { matchId, playerId } },
-    create: { matchId, playerId },
-    update: {},
-  });
-  touch(matchId);
-}
-
-export async function cancelPresence(matchId: string, formData: FormData) {
-  const playerId = String(formData.get("playerId") ?? "");
-  const match = await db.match.findUnique({ where: { id: matchId } });
-  // Depois do sorteio, desistências são tratadas pelo organizador.
-  if (!match || match.status !== "OPEN") return;
-  await db.attendance.deleteMany({ where: { matchId, playerId } });
-  touch(matchId);
-}
-
 export type VoteInput = { targetId: string; score: number };
+
+async function hasPlayerAccess(playerId: string, playerPin: string | null): Promise<boolean> {
+  if (!playerPin) return true;
+  if (await isAdmin()) return true;
+  const cookieStore = await cookies();
+  const cookiePin = cookieStore.get(`player_pin_${playerId}`)?.value;
+  return cookiePin != null && cookiePin === playerPin;
+}
 
 export async function submitVotes(
   token: string,
@@ -43,12 +23,18 @@ export async function submitVotes(
 ): Promise<{ ok: boolean; error?: string; saved?: number }> {
   const match = await db.match.findUnique({
     where: { voteToken: token },
-    include: { attendances: true },
+    include: { attendances: { include: { player: true } } },
   });
   if (!match || !match.votingOpen) return { ok: false, error: "A votação desta partida está fechada." };
 
+  const voterAtt = match.attendances.find((a) => a.playerId === voterId);
+  if (!voterAtt) return { ok: false, error: "Jogador não encontrado nesta partida." };
+
+  if (!(await hasPlayerAccess(voterId, voterAtt.player.pin))) {
+    return { ok: false, error: "Autenticação por PIN necessária para votar como este jogador." };
+  }
+
   const played = new Set(match.attendances.map((a) => a.playerId));
-  if (!played.has(voterId)) return { ok: false, error: "Jogador não encontrado nesta partida." };
 
   const alreadyVoted = await db.vote.findFirst({
     where: { matchId: match.id, voterId },
@@ -75,6 +61,8 @@ export async function submitVotes(
     ),
   );
   revalidatePath(`/votar/${token}`);
+  revalidatePath(`/partida/${match.id}`);
+  revalidatePath(`/admin/partida/${match.id}`);
   return { ok: true, saved: clean.size };
 }
 
@@ -88,6 +76,10 @@ export async function setPlayerPin(
   }
   const player = await db.player.findUnique({ where: { id: playerId } });
   if (!player) return { ok: false, error: "Jogador não encontrado." };
+
+  if (player.pin && !(await hasPlayerAccess(playerId, player.pin))) {
+    return { ok: false, error: "Este jogador já possui um PIN cadastrado." };
+  }
 
   await db.player.update({
     where: { id: playerId },
@@ -136,9 +128,14 @@ export async function verifyPlayerPin(
 
 export async function togglePlayerPublic(
   playerId: string
-): Promise<{ ok: boolean; isPublic?: boolean }> {
+): Promise<{ ok: boolean; isPublic?: boolean; error?: string }> {
   const player = await db.player.findUnique({ where: { id: playerId } });
-  if (!player) return { ok: false };
+  if (!player) return { ok: false, error: "Jogador não encontrado." };
+
+  if (!(await hasPlayerAccess(playerId, player.pin))) {
+    return { ok: false, error: "Apenas o jogador com PIN (ou o organizador) pode alterar a visibilidade." };
+  }
+
   const updated = await db.player.update({
     where: { id: playerId },
     data: { isPublic: !player.isPublic },

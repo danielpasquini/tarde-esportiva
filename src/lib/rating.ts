@@ -1,6 +1,12 @@
 export const MIN_SCORE = 1;
 export const MAX_SCORE = 5;
 
+export type MedalCounts = {
+  gold: number;
+  silver: number;
+  bronze: number;
+};
+
 /** Normaliza para a escala 1–5 em passos de meia estrela. */
 export function normalizeScore(value: number): number | null {
   if (!Number.isFinite(value)) return null;
@@ -35,4 +41,46 @@ export function revertBaseRating(currentBase: number, currentRatedMatches: numbe
 
 export function formatRating(value: number | null | undefined) {
   return value == null ? "–" : value.toFixed(1).replace(".", ",");
+}
+
+/**
+ * Calcula o quadro de medalhas (🥇 1º, 🥈 2º, 🥉 3º) acumulado por jogador
+ * considerando todas as partidas encerradas (FINISHED) com votos registrados.
+ */
+export function computeMedalsFromVotes(
+  votes: { matchId: string; targetId: string; score: number }[]
+): Record<string, MedalCounts> {
+  const byMatch: Record<string, Record<string, { sum: number; count: number }>> = {};
+
+  for (const v of votes) {
+    if (!byMatch[v.matchId]) byMatch[v.matchId] = {};
+    if (!byMatch[v.matchId][v.targetId]) byMatch[v.matchId][v.targetId] = { sum: 0, count: 0 };
+    byMatch[v.matchId][v.targetId].sum += v.score;
+    byMatch[v.matchId][v.targetId].count += 1;
+  }
+
+  const medals: Record<string, MedalCounts> = {};
+  const ensure = (playerId: string) => {
+    if (!medals[playerId]) medals[playerId] = { gold: 0, silver: 0, bronze: 0 };
+    return medals[playerId];
+  };
+
+  for (const targets of Object.values(byMatch)) {
+    const entries = Object.entries(targets)
+      .filter(([, s]) => s.count > 0)
+      .map(([targetId, s]) => ({
+        targetId,
+        avg: Math.round((s.sum / s.count) * 10) / 10,
+      }))
+      .filter((e) => e.avg > 0);
+
+    for (const entry of entries) {
+      const rank = 1 + entries.filter((other) => other.avg > entry.avg).length;
+      if (rank === 1) ensure(entry.targetId).gold += 1;
+      else if (rank === 2) ensure(entry.targetId).silver += 1;
+      else if (rank === 3) ensure(entry.targetId).bronze += 1;
+    }
+  }
+
+  return medals;
 }

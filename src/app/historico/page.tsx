@@ -5,7 +5,8 @@ import { ArrowUpRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { isAdmin } from "@/lib/auth";
 import { formatShortDate } from "@/lib/format";
-import { TeamName, Empty, Loading } from "@/components/ui";
+import { computeMedalsFromVotes } from "@/lib/rating";
+import { Empty, Loading } from "@/components/ui";
 import { HistoryPlayersList, type PlayerHistoryItem } from "@/components/history-players-list";
 
 export const metadata = { title: "Histórico" };
@@ -14,13 +15,12 @@ async function History() {
   await connection();
   const isOrganizer = await isAdmin();
 
-  const [finishedMatches, allMatchesFallback, allMatchesList, players] = await Promise.all([
+  const [finishedMatches, allMatchesFallback, allMatchesList, players, finishedVotes] = await Promise.all([
     db.match.findMany({
       where: { status: "FINISHED" },
       orderBy: { date: "desc" },
       take: 5,
       include: {
-        games: { orderBy: { createdAt: "asc" } },
         _count: { select: { attendances: true } },
       },
     }),
@@ -28,7 +28,6 @@ async function History() {
       orderBy: { date: "desc" },
       take: 5,
       include: {
-        games: { orderBy: { createdAt: "asc" } },
         _count: { select: { attendances: true } },
       },
     }),
@@ -51,11 +50,15 @@ async function History() {
         },
       },
     }),
+    db.vote.findMany({
+      where: { match: { status: "FINISHED" } },
+      select: { matchId: true, targetId: true, score: true },
+    }),
   ]);
 
   const recentMatches = finishedMatches.length > 0 ? finishedMatches : allMatchesFallback;
+  const medalsByPlayer = computeMedalsFromVotes(finishedVotes);
 
-  // Montar histórico de partidas e participações com notas
   const playersData: PlayerHistoryItem[] = players
     .map((p) => {
       const attendanceMap: Record<string, { team: string | null; avg: number | null }> = {};
@@ -84,6 +87,7 @@ async function History() {
         timesPlayed,
         hasPin: !!p.pin,
         isPublic: p.isPublic,
+        medals: medalsByPlayer[p.id] ?? { gold: 0, silver: 0, bronze: 0 },
         attendanceMap,
       };
     })
@@ -91,7 +95,7 @@ async function History() {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* 1) Card dos Últimos 5 Jogos Jogados para clicar e entrar na Página Pública */}
+      {/* 1) Card dos Últimos 5 Jogos Jogados */}
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between border-b-2 border-moss pb-1">
           <div>
@@ -133,7 +137,7 @@ async function History() {
         )}
       </section>
 
-      {/* 2) Card: Jogadores (ordenados por número de vezes que jogou, sem notas para usuário, notas em estrelas/decimais para organizador) */}
+      {/* 2) Card: Jogadores */}
       <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
         <div className="flex items-center justify-between border-b-2 border-moss pb-2">
           <div>

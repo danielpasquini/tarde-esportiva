@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ArrowLeft, ArrowUpRight, Trash2, Users, Vote, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, RotateCcw, Trash2, Users, Vote, CheckCircle2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { formatMatchDate, formatDateTimeInput } from "@/lib/format";
@@ -13,6 +13,7 @@ import {
   deleteMatch,
   openVoting,
   removeAttendance,
+  reopenVoting,
   updateMatchConfig,
 } from "@/app/admin/actions";
 import { CopyLink, SubmitButton } from "@/components/client";
@@ -36,16 +37,25 @@ async function AdminVotesTable({ matchId }: { matchId: string }) {
   const avgMap = new Map(averages.map((a) => [a.targetId, a._avg.score ?? 0]));
   const countMap = new Map(averages.map((a) => [a.targetId, a._count.score ?? 0]));
 
-  const list = attendances
-    .map((att) => ({
-      id: att.playerId,
-      name: att.player.name,
-      isGoalkeeper: att.asGoalkeeper || att.player.isGoalkeeper,
-      avg: avgMap.get(att.playerId) ?? 0,
-      count: countMap.get(att.playerId) ?? 0,
-      baseRating: att.player.baseRating,
-    }))
+  const sorted = attendances
+    .map((att) => {
+      const rawAvg = avgMap.get(att.playerId) ?? 0;
+      const roundedAvg = Math.round(rawAvg * 10) / 10;
+      return {
+        id: att.playerId,
+        name: att.player.name,
+        isGoalkeeper: att.asGoalkeeper || att.player.isGoalkeeper,
+        avg: roundedAvg,
+        count: countMap.get(att.playerId) ?? 0,
+        baseRating: att.player.baseRating,
+      };
+    })
     .sort((a, b) => b.avg - a.avg || a.name.localeCompare(b.name));
+
+  const list = sorted.map((p, idx) => ({
+    ...p,
+    rank: p.avg > 0 ? 1 + sorted.filter((other) => other.avg > p.avg).length : idx + 1,
+  }));
 
   if (!list.length) {
     return <p className="text-xs text-moss-soft">Nenhum voto computado para esta partida.</p>;
@@ -57,37 +67,47 @@ async function AdminVotesTable({ matchId }: { matchId: string }) {
         <table className="w-full text-left text-xs bg-paper">
           <thead className="bg-paper-dark border-b-2 border-moss uppercase tracking-wider text-[9px] sm:text-[10px] text-moss-soft">
             <tr>
-              <th className="p-2 sm:p-2.5 w-8">#</th>
-              <th className="p-2 sm:p-2.5">Jogador</th>
-              <th className="p-2 sm:p-2.5 text-center">Votos</th>
-              <th className="p-2 sm:p-2.5 text-right">Média Partida</th>
-              <th className="p-2 sm:p-2.5 text-right">Nota Base Geral</th>
-              <th className="p-2 sm:p-2.5 text-center w-16">Perfil</th>
+              <th className="py-2 px-1.5 sm:p-2.5 w-7 text-center">#</th>
+              <th className="py-2 px-1.5 sm:p-2.5">Jogador</th>
+              <th className="py-2 px-1.5 sm:p-2.5 text-center">Votos</th>
+              <th className="py-2 px-1.5 sm:p-2.5 text-right">Média</th>
+              <th className="py-2 px-1.5 sm:p-2.5 text-right">Base</th>
+              <th className="hidden sm:table-cell p-2.5 text-center w-16">Perfil</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-moss/20 text-[11px] sm:text-xs">
-            {list.map((p, idx) => (
-              <tr key={p.id} className={idx < 5 && p.avg > 0 ? "bg-amber-500/5 font-semibold" : ""}>
-                <td className="p-2 sm:p-2.5 tabular-nums text-moss-soft">{idx + 1}º</td>
-                <td className="p-2 sm:p-2.5 min-w-0">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span className="truncate">{p.name}</span>
+            {list.map((p) => (
+              <tr key={p.id} className={p.rank <= 5 && p.avg > 0 ? "bg-amber-500/5 font-semibold" : ""}>
+                <td className="py-2 px-1.5 sm:p-2.5 tabular-nums text-moss-soft text-center">
+                  {p.avg > 0 ? `${p.rank}º` : "–"}
+                </td>
+                <td className="py-2 px-1.5 sm:p-2.5 min-w-0 max-w-[130px] sm:max-w-none">
+                  <div className="flex items-center gap-1 min-w-0">
+                    {p.avg > 0 && p.rank === 1 && <span className="text-xs leading-none shrink-0">🥇</span>}
+                    {p.avg > 0 && p.rank === 2 && <span className="text-xs leading-none shrink-0">🥈</span>}
+                    {p.avg > 0 && p.rank === 3 && <span className="text-xs leading-none shrink-0">🥉</span>}
+                    <Link
+                      href={`/perfil/${p.id}`}
+                      className="truncate text-moss hover:text-brick hover:underline"
+                    >
+                      {p.name}
+                    </Link>
                     {p.isGoalkeeper && <GloveBadge />}
-                    {idx === 0 && p.avg > 0 && (
+                    {p.rank === 1 && p.avg > 0 && (
                       <span className="text-[8px] sm:text-[9px] bg-amber-500 text-white font-bold px-1 rounded shrink-0">
                         CRAQUE
                       </span>
                     )}
                   </div>
                 </td>
-                <td className="p-2 sm:p-2.5 text-center tabular-nums">{p.count}</td>
-                <td className="p-2 sm:p-2.5 text-right font-mono font-bold text-moss whitespace-nowrap">
+                <td className="py-2 px-1.5 sm:p-2.5 text-center tabular-nums">{p.count}</td>
+                <td className="py-2 px-1.5 sm:p-2.5 text-right font-mono font-bold text-moss whitespace-nowrap">
                   {p.avg > 0 ? `★ ${p.avg.toFixed(1).replace(".", ",")}` : "–"}
                 </td>
-                <td className="p-2 sm:p-2.5 text-right font-mono text-moss-soft whitespace-nowrap">
+                <td className="py-2 px-1.5 sm:p-2.5 text-right font-mono text-moss-soft whitespace-nowrap">
                   ★ {p.baseRating.toFixed(1).replace(".", ",")}
                 </td>
-                <td className="p-2 sm:p-2.5 text-center">
+                <td className="hidden sm:table-cell p-2.5 text-center">
                   <Link
                     href={`/perfil/${p.id}`}
                     className="text-[10px] font-bold text-brick hover:underline uppercase"
@@ -145,7 +165,7 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Gerenciar Partida</span>
             <h1 className="font-serif text-3xl leading-tight first-letter:uppercase">{formatMatchDate(match.date)}</h1>
             {(match.location || match.cost != null) && (
-              <p className="text-xs text-moss font-semibold mt-0.5 flex items-center gap-3">
+              <p className="text-xs text-moss font-semibold mt-0.5 flex items-center gap-3 flex-wrap">
                 {match.location && <span>📍 {match.location}</span>}
                 {match.cost != null && <span>💰 R$ {match.cost.toFixed(2).replace(".", ",")} por jogador</span>}
               </p>
@@ -164,15 +184,15 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
       </header>
 
       {/* Votação e Notas */}
-      <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
+      <section className="border-[3px] border-moss bg-paper p-4 sm:p-5 shadow-hard flex flex-col gap-4">
         <div className="flex items-center justify-between border-b-2 border-moss/20 pb-2 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Vote className="size-5 text-moss" />
             <h2 className="font-serif text-2xl">Votação e Notas</h2>
           </div>
-          {match.status !== "FINISHED" && (
-            <div className="flex items-center gap-2">
-              {!match.votingOpen ? (
+          <div className="flex items-center gap-2">
+            {match.status !== "FINISHED" ? (
+              !match.votingOpen ? (
                 <form action={openVoting.bind(null, match.id)}>
                   <SubmitButton className="bg-moss text-paper hover:bg-moss-soft py-1.5 px-3 text-xs font-bold uppercase tracking-wider shadow-hard-sm">
                     Abrir Votação
@@ -187,26 +207,36 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
                     Encerrar Votação e Salvar Notas
                   </SubmitButton>
                 </form>
-              )}
-            </div>
-          )}
+              )
+            ) : (
+              <form action={reopenVoting.bind(null, match.id)}>
+                <SubmitButton
+                  className="bg-paper-dark text-moss hover:bg-paper py-1.5 px-3 text-xs font-bold uppercase tracking-wider shadow-hard-sm"
+                  confirm="Deseja reabrir a votação desta partida? As notas aplicadas ao encerrar serão revertidas até o novo encerramento."
+                >
+                  <RotateCcw className="size-3.5" />
+                  Reabrir Votação
+                </SubmitButton>
+              </form>
+            )}
+          </div>
         </div>
 
         {match.votingOpen && (
-          <div className="p-3 bg-paper-dark border-2 border-moss flex items-center justify-between gap-3 flex-wrap">
-            <div className="min-w-0 flex-1">
+          <div className="p-3 bg-paper-dark border-2 border-moss flex flex-col gap-2.5">
+            <div className="min-w-0">
               <span className="text-[10px] font-bold uppercase tracking-wider text-brick block">Urna Aberta</span>
               <span className="text-xs text-moss font-mono truncate block">/votar/{match.voteToken}</span>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2">
               <CopyLink
                 url={`/votar/${match.voteToken}`}
                 id="copiar-link-voto"
-                className="py-1.5 px-3 text-xs w-auto shadow-none"
+                className="flex-1 min-w-[160px] py-2 px-3 text-[11px] shadow-none"
               />
               <Link
                 href={`/votar/${match.voteToken}`}
-                className="border-2 border-moss bg-paper px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-paper-dark"
+                className="border-2 border-moss bg-paper px-3 py-2 text-[11px] font-bold uppercase tracking-wider hover:bg-paper-dark text-center"
               >
                 Abrir Cédula ↗
               </Link>
@@ -225,7 +255,7 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
       </section>
 
       {/* Lista de Presença da Partida */}
-      <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
+      <section className="border-[3px] border-moss bg-paper p-4 sm:p-5 shadow-hard flex flex-col gap-4">
         <div className="flex items-center justify-between border-b-2 border-moss/20 pb-2">
           <div className="flex items-center gap-2">
             <Users className="size-5 text-moss" />
@@ -272,7 +302,6 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
           <div className="mt-4 pt-4 border-t-2 border-moss/20 flex flex-col gap-4">
             <h3 className="font-serif text-lg">Adicionar Jogadores</h3>
 
-            {/* Checklist de jogadores cadastrados disponíveis */}
             {availablePlayers.length > 0 ? (
               <div className="flex flex-col gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-moss-soft">
@@ -317,7 +346,7 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
       </section>
 
       {/* Editar Dados da Partida */}
-      <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
+      <section className="border-[3px] border-moss bg-paper p-4 sm:p-5 shadow-hard flex flex-col gap-4">
         <h2 className="font-serif text-xl border-b-2 border-moss/20 pb-2">Editar Dados da Partida</h2>
         <form action={updateMatchConfig.bind(null, match.id)} className="flex flex-col gap-3">
           <div>

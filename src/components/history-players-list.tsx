@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Star, ChevronDown, Lock, Globe, User } from "lucide-react";
 import { formatShortDate } from "@/lib/format";
-import { GloveBadge } from "@/components/ui";
+import type { MedalCounts } from "@/lib/rating";
+import { GloveBadge, PlayerMedals } from "@/components/ui";
 
 export type MatchItem = {
   id: string;
@@ -19,6 +20,7 @@ export type PlayerHistoryItem = {
   timesPlayed: number;
   hasPin?: boolean;
   isPublic?: boolean;
+  medals?: MedalCounts;
   attendanceMap: Record<string, { team: string | null; avg: number | null }>;
 };
 
@@ -42,30 +44,57 @@ export function HistoryPlayersList({
         {displayedPlayers.map((p, index) => (
           <li key={p.id}>
             <details className="group">
-              <summary className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer bg-paper hover:bg-paper-dark transition-colors list-none select-none">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <span className="font-mono text-xs text-moss-soft w-6 tabular-nums">
-                    #{index + 1}
+              <summary className="flex flex-col gap-2 px-3.5 py-3 cursor-pointer bg-paper hover:bg-paper-dark transition-colors list-none select-none">
+                {/* Linha 1: Posição + Medalhas acumuladas na frente do nome + Nome + Badges + Expandir */}
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1 flex-wrap">
+                    <span className="font-mono text-xs text-moss-soft w-6 shrink-0 tabular-nums">
+                      #{index + 1}
+                    </span>
+                    <PlayerMedals medals={p.medals} />
+                    <span className="font-semibold text-sm truncate text-moss">{p.name}</span>
+                    {p.isGoalkeeper && <GloveBadge />}
+                    {p.hasPin && !p.isPublic && (
+                      <span title="Perfil Privado com PIN" className="shrink-0">
+                        <Lock className="size-3 text-moss-soft" />
+                      </span>
+                    )}
+                    {p.isPublic && (
+                      <span title="Perfil Público" className="shrink-0">
+                        <Globe className="size-3 text-moss" />
+                      </span>
+                    )}
+                  </div>
+
+                  <span className="text-[10px] font-bold uppercase text-moss-soft underline shrink-0 group-open:hidden">
+                    Partidas ▾
                   </span>
-                  <span className="font-semibold text-sm truncate text-moss">{p.name}</span>
-                  {p.isGoalkeeper && <GloveBadge />}
-                  {p.hasPin && !p.isPublic && (
-                    <span title="Perfil Privado com PIN">
-                      <Lock className="size-3 text-moss-soft shrink-0" />
-                    </span>
-                  )}
-                  {p.isPublic && (
-                    <span title="Perfil Público">
-                      <Globe className="size-3 text-moss shrink-0" />
-                    </span>
-                  )}
+                  <span className="text-[10px] font-bold uppercase text-moss-soft underline shrink-0 hidden group-open:inline">
+                    Ocultar ▴
+                  </span>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                {/* Linha 2: Quantidade de Partidas + Nota (se organizador) + Botão Perfil */}
+                <div className="flex items-center justify-between gap-2 pl-7">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] uppercase font-bold text-moss-soft tracking-wider bg-moss/10 px-2 py-0.5 rounded">
+                      {p.timesPlayed} {p.timesPlayed === 1 ? "partida" : "partidas"}
+                    </span>
+
+                    {isOrganizer && (
+                      <div className="flex items-center gap-1 border border-moss bg-paper-dark px-2 py-0.5 rounded shadow-xs">
+                        <Star className="size-3 fill-brick text-brick" />
+                        <span className="font-serif text-xs font-bold text-moss tabular-nums">
+                          {p.baseRating.toFixed(1).replace(".", ",")}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
                   <Link
                     href={`/perfil/${p.id}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-brick bg-paper hover:bg-paper-dark border border-moss/30 px-2 py-0.5 rounded shadow-xs"
+                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-brick bg-paper hover:bg-paper-dark border border-moss/30 px-2.5 py-0.5 rounded shadow-xs shrink-0"
                     title="Acessar Perfil Individual"
                   >
                     {p.hasPin && !p.isPublic && !isOrganizer ? (
@@ -75,27 +104,6 @@ export function HistoryPlayersList({
                     )}
                     Perfil
                   </Link>
-
-                  <span className="text-[10px] uppercase font-bold text-moss-soft tracking-wider bg-moss/10 px-2 py-0.5 rounded">
-                    {p.timesPlayed} {p.timesPlayed === 1 ? "partida" : "partidas"}
-                  </span>
-
-                  {/* Notas visíveis EXCLUSIVAMENTE para o organizador */}
-                  {isOrganizer && (
-                    <div className="flex items-center gap-1 border border-moss bg-paper-dark px-2 py-0.5 rounded shadow-xs">
-                      <Star className="size-3 fill-brick text-brick" />
-                      <span className="font-serif text-xs font-bold text-moss tabular-nums">
-                        ★ {p.baseRating.toFixed(1).replace(".", ",")}
-                      </span>
-                    </div>
-                  )}
-
-                  <span className="text-[10px] font-bold uppercase text-moss-soft underline group-open:hidden">
-                    Partidas ▾
-                  </span>
-                  <span className="text-[10px] font-bold uppercase text-moss-soft underline hidden group-open:inline">
-                    Ocultar ▴
-                  </span>
                 </div>
               </summary>
 
@@ -152,7 +160,6 @@ export function HistoryPlayersList({
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
-                            {/* Notas visíveis apenas para organizador em partidas que participou */}
                             {isOrganizer && wasPresent && att.avg != null && (
                               <span className="font-mono font-bold text-xs text-moss">
                                 ★ {att.avg.toFixed(1).replace(".", ",")}

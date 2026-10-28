@@ -1,5 +1,5 @@
 import { Hand } from "lucide-react";
-import { TEAM_META, isTeam } from "@/lib/teams";
+import type { MedalCounts } from "@/lib/rating";
 import { cn } from "@/lib/utils";
 
 export const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
@@ -22,22 +22,43 @@ export function GloveBadge({ className }: { className?: string; showLabel?: bool
   );
 }
 
-export function TeamDot({ team, className }: { team: string; className?: string }) {
-  const meta = isTeam(team) ? TEAM_META[team] : null;
+export function PlayerMedals({
+  medals,
+  className,
+}: {
+  medals?: MedalCounts;
+  className?: string;
+}) {
+  if (!medals || (medals.gold === 0 && medals.silver === 0 && medals.bronze === 0)) {
+    return null;
+  }
+
   return (
     <span
-      className={cn("size-3.5 border-2 border-moss inline-block shrink-0", meta?.swatch, className)}
-      aria-hidden
-    />
-  );
-}
-
-export function TeamName({ team }: { team: string }) {
-  const meta = isTeam(team) ? TEAM_META[team] : null;
-  return (
-    <span className="inline-flex items-center gap-2">
-      <TeamDot team={team} />
-      <span className="font-semibold">{meta?.label ?? team}</span>
+      className={cn(
+        "inline-flex items-center gap-1 text-[11px] font-bold tabular-nums shrink-0 select-none leading-none",
+        className,
+      )}
+      title={`Medalhas: ${medals.gold} ouro, ${medals.silver} prata, ${medals.bronze} bronze`}
+    >
+      {medals.gold > 0 && (
+        <span className="inline-flex items-center gap-0.5 bg-amber-400/20 text-amber-950 border border-amber-500/40 px-1 py-0.5 rounded">
+          <span>🥇</span>
+          <span>{medals.gold}</span>
+        </span>
+      )}
+      {medals.silver > 0 && (
+        <span className="inline-flex items-center gap-0.5 bg-slate-200/80 text-slate-800 border border-slate-400/50 px-1 py-0.5 rounded">
+          <span>🥈</span>
+          <span>{medals.silver}</span>
+        </span>
+      )}
+      {medals.bronze > 0 && (
+        <span className="inline-flex items-center gap-0.5 bg-amber-700/15 text-amber-900 border border-amber-700/35 px-1 py-0.5 rounded">
+          <span>🥉</span>
+          <span>{medals.bronze}</span>
+        </span>
+      )}
     </span>
   );
 }
