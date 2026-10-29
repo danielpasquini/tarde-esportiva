@@ -9,22 +9,22 @@ const TEAMS = [
   {
     id: "azul",
     label: "Azul",
-    colorClass: "bg-blue-600 border-blue-700",
+    colorClass: "bg-sky-500/80 border-sky-600/40",
   },
   {
     id: "vermelho",
     label: "Vermelho",
-    colorClass: "bg-red-600 border-red-700",
+    colorClass: "bg-rose-500/80 border-rose-600/40",
   },
   {
     id: "preto",
     label: "Preto",
-    colorClass: "bg-neutral-900 border-neutral-950",
+    colorClass: "bg-neutral-800/85 border-neutral-900/40",
   },
   {
     id: "amarelo",
     label: "Amarelo",
-    colorClass: "bg-yellow-400 border-yellow-500",
+    colorClass: "bg-yellow-400 border-yellow-500/50",
   },
 ] as const;
 
@@ -64,11 +64,11 @@ export function TeamColorSelector({
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      {/* Container segmentado de cores */}
+      {/* Container segmentado de cores com espaçamento confortável contra missclick */}
       <div
         role="group"
         aria-label="Selecionar cor do time"
-        className="inline-flex items-center gap-1.5 p-1 rounded-full bg-paper-dark/70 border border-moss/15 shadow-2xs select-none"
+        className="inline-flex items-center gap-3 p-1.5 px-2.5 rounded-full bg-paper-dark/65 border border-moss/12 shadow-2xs select-none"
       >
         {TEAMS.map((t) => {
           const isSelected = currentTeam === t.id;
@@ -81,16 +81,20 @@ export function TeamColorSelector({
               aria-pressed={isSelected}
               title={`Time ${t.label}${isSelected ? " (Selecionado - clique para remover)" : ""}`}
               className={cn(
-                "relative size-6 rounded-full transition-all duration-150 flex items-center justify-center cursor-pointer border select-none active:scale-95 focus:outline-none",
+                "relative size-6 rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer border select-none active:scale-90 focus:outline-none",
                 t.colorClass,
                 isSelected
-                  ? "ring-1.5 ring-black ring-offset-2 ring-offset-paper opacity-100 scale-105"
+                  ? "scale-115 opacity-100 shadow-xs"
                   : hasSelection
-                  ? "opacity-25 hover:opacity-50"
-                  : "opacity-85 hover:opacity-100",
+                  ? "opacity-25 hover:opacity-50 scale-95"
+                  : "opacity-80 hover:opacity-100",
                 pending && "opacity-40 cursor-wait",
               )}
-            />
+            >
+              {isSelected && (
+                <span className="size-1.5 rounded-full bg-white/95 shadow-2xs pointer-events-none" />
+              )}
+            </button>
           );
         })}
       </div>
@@ -105,8 +109,8 @@ export function TeamColorSelector({
           className={cn(
             "h-6 px-2 rounded-full text-[10px] font-extrabold uppercase tracking-wider transition-all flex items-center gap-1 border cursor-pointer select-none active:scale-95 shadow-2xs",
             isGoalkeeper
-              ? "bg-amber-400/25 text-amber-950 border-black font-black ring-1.5 ring-black ring-offset-1 ring-offset-paper"
-              : "bg-paper-dark/70 text-moss-soft border-moss/15 hover:text-moss hover:bg-paper-dark",
+              ? "bg-amber-400/20 text-amber-950 border-amber-600/40 font-black"
+              : "bg-paper-dark/60 text-moss-soft border-moss/10 hover:text-moss hover:bg-paper-dark/80",
             pending && "opacity-40 cursor-wait",
           )}
         >
