@@ -28,7 +28,6 @@ export type PlayerHistoryItem = {
   attendanceMap: Record<string, { team: string | null; avg: number | null }>;
 };
 
-type PositionFilter = "all" | "gk" | "line";
 type SortMode = "matches" | "medals" | "name" | "rating";
 
 export function HistoryPlayersList({
@@ -42,7 +41,6 @@ export function HistoryPlayersList({
 }) {
   const [visibleCount, setVisibleCount] = useState(12);
   const [query, setQuery] = useState("");
-  const [posFilter, setPosFilter] = useState<PositionFilter>("all");
   const [sortMode, setSortMode] = useState<SortMode>("matches");
 
   const filteredPlayers = useMemo(() => {
@@ -50,8 +48,6 @@ export function HistoryPlayersList({
     return players
       .filter((p) => {
         if (q && !p.name.toLowerCase().includes(q)) return false;
-        if (posFilter === "gk" && !p.isGoalkeeper) return false;
-        if (posFilter === "line" && p.isGoalkeeper) return false;
         return true;
       })
       .sort((a, b) => {
@@ -72,7 +68,7 @@ export function HistoryPlayersList({
         }
         return b.timesPlayed - a.timesPlayed || a.name.localeCompare(b.name);
       });
-  }, [players, query, posFilter, sortMode, isOrganizer]);
+  }, [players, query, sortMode, isOrganizer]);
 
   const displayedPlayers = filteredPlayers.slice(0, visibleCount);
   const hasMore = visibleCount < filteredPlayers.length;
@@ -103,30 +99,7 @@ export function HistoryPlayersList({
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="inline-flex items-center gap-0.5 bg-white/70 p-0.5 rounded-lg border border-moss/12">
-            {(
-              [
-                ["all", "Todos"],
-                ["line", "Linha"],
-                ["gk", "Goleiros"],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setPosFilter(key)}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                  posFilter === key
-                    ? "bg-moss text-paper shadow-2xs"
-                    : "text-moss-soft hover:text-moss"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
+        <div className="flex items-center justify-end gap-2 flex-wrap">
           <div className="flex items-center gap-1.5">
             <span className="text-[9px] font-extrabold uppercase tracking-wider text-moss-soft">Ordenar:</span>
             <select
@@ -172,15 +145,6 @@ export function HistoryPlayersList({
                       </span>
 
                       <span className="font-bold text-sm truncate text-moss">{p.name}</span>
-
-                      {totalMedals > 0 && (
-                        <span
-                          className="inline-flex items-center gap-0.5 text-[10px] font-mono font-bold text-amber-900 bg-amber-400/20 border border-amber-500/35 px-1.5 py-0.5 rounded-xs shrink-0 leading-none"
-                          title={`${totalMedals} medalha(s)`}
-                        >
-                          🏅 {totalMedals}
-                        </span>
-                      )}
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
