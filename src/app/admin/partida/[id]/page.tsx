@@ -444,11 +444,11 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
         </div>
         <form action={deleteMatch.bind(null, match.id)}>
           <SubmitButton
-            className="bg-brick text-paper hover:bg-brick/90 py-2 px-3 text-xs font-extrabold uppercase tracking-wider shadow-none shrink-0 border-transparent"
+            className="inline-flex items-center gap-2 bg-brick text-paper hover:bg-brick/90 py-2.5 px-3.5 text-xs font-extrabold uppercase tracking-wider shadow-none shrink-0 border-transparent cursor-pointer"
             confirm="Tem certeza que deseja apagar permanentemente esta partida?"
           >
-            <Trash2 className="size-3.5 mr-1" />
-            Excluir Partida
+            <Trash2 className="size-4 shrink-0" strokeWidth={2.2} />
+            <span>Excluir Partida</span>
           </SubmitButton>
         </form>
       </section>
