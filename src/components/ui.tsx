@@ -11,39 +11,39 @@ export const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
 
 export const TEAM_COLORS: Record<
   string,
-  { label: string; bg: string; text: string; border: string; dot: string; ring: string }
+  { label: string; bg: string; text: string; border: string; dot: string; glow: string }
 > = {
   azul: {
     label: "Azul",
-    bg: "bg-blue-600/15",
+    bg: "bg-blue-600/12",
     text: "text-blue-900",
     border: "border-blue-600/35",
     dot: "bg-blue-600",
-    ring: "ring-blue-500",
+    glow: "shadow-[0_0_8px_rgba(37,99,235,0.4)]",
   },
   vermelho: {
     label: "Vermelho",
-    bg: "bg-red-600/15",
+    bg: "bg-red-600/12",
     text: "text-red-900",
     border: "border-red-600/35",
     dot: "bg-red-600",
-    ring: "ring-red-500",
+    glow: "shadow-[0_0_8px_rgba(220,38,38,0.4)]",
   },
   preto: {
     label: "Preto",
-    bg: "bg-neutral-900/15",
-    text: "text-neutral-900",
+    bg: "bg-neutral-900/10",
+    text: "text-neutral-950",
     border: "border-neutral-900/40",
     dot: "bg-neutral-900",
-    ring: "ring-neutral-900",
+    glow: "shadow-[0_0_8px_rgba(23,23,23,0.35)]",
   },
   amarelo: {
     label: "Amarelo",
-    bg: "bg-amber-400/25",
+    bg: "bg-amber-300/25",
     text: "text-amber-950",
-    border: "border-amber-500/45",
+    border: "border-amber-400/60",
     dot: "bg-amber-400",
-    ring: "ring-amber-400",
+    glow: "shadow-[0_0_8px_rgba(251,191,36,0.55)]",
   },
 };
 
@@ -64,7 +64,7 @@ export function TeamColorBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider shrink-0 border select-none leading-none align-middle shadow-2xs",
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider shrink-0 border select-none leading-none align-middle backdrop-blur-xs transition-all",
         config.bg,
         config.text,
         config.border,
@@ -72,8 +72,12 @@ export function TeamColorBadge({
       )}
       title={`Time ${config.label}`}
     >
-      <span className={cn("size-2 rounded-full shrink-0 shadow-2xs", config.dot)} />
-      {showLabel && <span>{config.label}</span>}
+      <span className={cn("size-2 rounded-full shrink-0", config.dot, config.glow)} />
+      {showLabel ? (
+        <span>{config.label}</span>
+      ) : (
+        <span className="font-mono text-[9px] opacity-75">{config.label.slice(0, 3)}</span>
+      )}
     </span>
   );
 }
