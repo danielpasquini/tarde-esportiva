@@ -304,7 +304,9 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
                     <TeamColorSelector
                       matchId={match.id}
                       attendanceId={a.id}
+                      playerId={a.playerId}
                       currentTeam={a.team}
+                      isGoalkeeper={a.asGoalkeeper || a.player.isGoalkeeper}
                     />
                   )}
 

@@ -260,6 +260,26 @@ export async function setAttendanceTeam(matchId: string, attendanceId: string, t
   touch(matchId);
 }
 
+export async function setAttendanceGoalkeeper(
+  matchId: string,
+  attendanceId: string,
+  playerId: string,
+  isGoalkeeper: boolean,
+) {
+  await requireAdmin();
+  await db.player.update({
+    where: { id: playerId },
+    data: { isGoalkeeper },
+  });
+  await db.attendance.updateMany({
+    where: { id: attendanceId, matchId },
+    data: { asGoalkeeper: isGoalkeeper },
+  });
+  touch(matchId);
+  revalidatePath("/admin/jogadores");
+  revalidatePath("/historico");
+}
+
 /* ---------- Votação ---------- */
 
 export async function openVoting(matchId: string) {

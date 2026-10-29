@@ -1,7 +1,8 @@
 "use client";
 
 import { useTransition } from "react";
-import { setAttendanceTeam } from "@/app/admin/actions";
+import { Hand } from "lucide-react";
+import { setAttendanceTeam, setAttendanceGoalkeeper } from "@/app/admin/actions";
 import { cn } from "@/lib/utils";
 
 const TEAMS = [
@@ -14,21 +15,32 @@ const TEAMS = [
 export function TeamColorSelector({
   matchId,
   attendanceId,
+  playerId,
   currentTeam,
+  isGoalkeeper = false,
   disabled = false,
 }: {
   matchId: string;
   attendanceId: string;
+  playerId?: string;
   currentTeam?: string | null;
+  isGoalkeeper?: boolean;
   disabled?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
 
-  const handleSelect = (teamId: string | null) => {
+  const handleSelectTeam = (teamId: string | null) => {
     if (disabled || pending) return;
     const next = currentTeam === teamId ? null : teamId;
     startTransition(async () => {
       await setAttendanceTeam(matchId, attendanceId, next);
+    });
+  };
+
+  const handleToggleGk = () => {
+    if (disabled || pending || !playerId) return;
+    startTransition(async () => {
+      await setAttendanceGoalkeeper(matchId, attendanceId, playerId, !isGoalkeeper);
     });
   };
 
@@ -41,7 +53,7 @@ export function TeamColorSelector({
             key={t.id}
             type="button"
             disabled={disabled || pending}
-            onClick={() => handleSelect(t.id)}
+            onClick={() => handleSelectTeam(t.id)}
             title={`Time ${t.label}${isSelected ? " (Selecionado - clique para remover)" : ""}`}
             className={cn(
               "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase transition-all cursor-pointer select-none",
@@ -56,6 +68,29 @@ export function TeamColorSelector({
           </button>
         );
       })}
+
+      {playerId && (
+        <>
+          <span className="w-px h-3.5 bg-moss/20 mx-0.5" aria-hidden="true" />
+          <button
+            type="button"
+            disabled={disabled || pending}
+            onClick={handleToggleGk}
+            title={isGoalkeeper ? "Goleiro fixo (clique para remover)" : "Definir como Goleiro Fixo"}
+            className={cn(
+              "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer select-none",
+              isGoalkeeper
+                ? "bg-amber-500/25 text-amber-950 border border-amber-600/40 font-black shadow-xs ring-1 ring-amber-500/50"
+                : "text-moss-soft hover:text-moss hover:bg-white/70 opacity-70 hover:opacity-100",
+              pending && "opacity-50 cursor-wait",
+            )}
+          >
+            <Hand className="size-3 text-amber-800 shrink-0 fill-amber-500/30" strokeWidth={2.2} />
+            <span className="hidden sm:inline">Goleiro</span>
+            <span className="sm:hidden">GL</span>
+          </button>
+        </>
+      )}
     </div>
   );
 }
