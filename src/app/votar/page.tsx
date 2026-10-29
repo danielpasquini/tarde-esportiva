@@ -1,11 +1,13 @@
-import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { db } from "@/lib/db";
+import { Loading } from "@/components/ui";
 import SpotlightCard from "@/components/SpotlightCard";
 import SplitText from "@/components/SplitText";
 import Link from "next/link";
 
-export default async function VotarRootPage({
+async function VotarRedirectInner({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -13,7 +15,6 @@ export default async function VotarRootPage({
   await connection();
   const sp = await searchParams;
 
-  // Busca a partida atualmente com votação aberta
   const openMatch = await db.match.findFirst({
     where: { votingOpen: true },
     orderBy: { date: "desc" },
@@ -46,5 +47,17 @@ export default async function VotarRootPage({
         </Link>
       </SpotlightCard>
     </div>
+  );
+}
+
+export default function VotarRootPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <Suspense fallback={<Loading label="Localizando votação aberta…" />}>
+      <VotarRedirectInner searchParams={searchParams} />
+    </Suspense>
   );
 }
