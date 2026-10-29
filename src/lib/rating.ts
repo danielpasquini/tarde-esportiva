@@ -96,15 +96,15 @@ export function computeMatchRobustAverages(
 
   // 4. Calibração e Expansão de Amplitude (Min-Max Rescaling / Stretch)
   // O objetivo é garantir que a amplitude do resultado seja expandida de forma que:
-  // - O maior jogador atinja >= 4.8 (alcançando 5 estrelas / topo)
-  // - O menor jogador atinja <= 1.2 (alcançando 1 estrela / base)
-  // - As notas intermediárias preservem proporcionalmente a distância e fiquem contidas em [1.0, 5.0].
-  const TARGET_MIN = 1.0;
-  const TARGET_MAX = 5.0;
+  // - O maior jogador atinja entre 4,8 e 4,9 (ex: 4.85 -> 4.8 / 4.9)
+  // - O menor jogador atinja entre 1,1 e 1,2 (ex: 1.15 -> 1.1 / 1.2)
+  // - As notas intermediárias preservem proporcionalmente a distância dentro dessa escala.
+  const TARGET_MIN = 1.15;
+  const TARGET_MAX = 4.85;
 
   if (unscaledAverages.length === 1) {
     const only = unscaledAverages[0];
-    const rounded = Math.round(Math.max(TARGET_MIN, Math.min(TARGET_MAX, only.avg)) * 10) / 10;
+    const rounded = Math.round(Math.max(1.0, Math.min(5.0, only.avg)) * 10) / 10;
     result.set(only.targetId, { avg: rounded, count: only.count });
     return result;
   }
@@ -124,12 +124,12 @@ export function computeMatchRobustAverages(
       // Se todos empataram com exatamente a mesma nota
       finalAvg = item.avg;
     } else {
-      // Mapeamento linear para esticar a amplitude cobrindo de 1.0 a 5.0
+      // Mapeamento linear para esticar a amplitude cobrindo entre [TARGET_MIN, TARGET_MAX]
       const normalized = (item.avg - minAvg) / currentSpan;
       finalAvg = TARGET_MIN + normalized * (TARGET_MAX - TARGET_MIN);
     }
 
-    const clamped = Math.max(TARGET_MIN, Math.min(TARGET_MAX, finalAvg));
+    const clamped = Math.max(1.0, Math.min(5.0, finalAvg));
     const roundedAvg = Math.round(clamped * 10) / 10;
     result.set(item.targetId, { avg: roundedAvg, count: item.count });
   }

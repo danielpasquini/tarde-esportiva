@@ -83,10 +83,14 @@ describe("Unit Tests — Rating & Medals (src/lib/rating.ts)", () => {
       { voterId: "v_normal", targetId: "pC", score: 4.0 },
     ];
     const robust = computeMatchRobustAverages(votes);
-    // For pA: scores are 5.0 (weight 0.5) and 3.0 (weight 1.0)
-    // Weighted avg = (5.0*0.5 + 3.0*1.0) / (0.5 + 1.0) = 5.5 / 1.5 = 3.666... -> rounded to 3.7
-    // Simple average would be (5.0 + 3.0) / 2 = 4.0
-    assert.equal(robust.get("pA")?.avg, 3.7);
+    // Unscaled preliminary averages:
+    // pA: (5.0*0.5 + 3.0*1.0) / 1.5 = 3.6667
+    // pB: (5.0*0.5 + 1.0*1.0) / 1.5 = 2.3333
+    // pC: (5.0*0.5 + 4.0*1.0) / 1.5 = 4.3333
+    // Max is pC (scaled to 4.9), Min is pB (scaled to 1.15 -> 1.2), pA is intermediate (3.6)
+    assert.equal(robust.get("pC")?.avg, 4.9);
+    assert.equal(robust.get("pB")?.avg, 1.2);
+    assert.equal(robust.get("pA")?.avg, 3.6);
 
     // Test outlier downweighting when >= 4 votes:
     const targetWithOutliers = [
@@ -106,7 +110,7 @@ describe("Unit Tests — Rating & Medals (src/lib/rating.ts)", () => {
     assert.equal(robustOutliers.get("pTarget")?.avg, 3.0);
   });
 
-  it("scales match score amplitude so max reaches 5.0 and min reaches 1.0", () => {
+  it("scales match score amplitude so max reaches between 4.8 and 4.9 and min reaches between 1.1 and 1.2", () => {
     // Suppose voters give narrow cluster of scores: 3.2, 3.4, 3.8
     const votes = [
       { voterId: "v1", targetId: "pLow", score: 3.2 },
@@ -117,13 +121,16 @@ describe("Unit Tests — Rating & Medals (src/lib/rating.ts)", () => {
       { voterId: "v2", targetId: "pHigh", score: 3.8 },
     ];
     const res = computeMatchRobustAverages(votes);
-    // Highest player (pHigh) must reach >= 4.8 (here 5.0)
-    assert.equal(res.get("pHigh")?.avg, 5.0);
-    // Lowest player (pLow) must reach <= 1.2 (here 1.0)
-    assert.equal(res.get("pLow")?.avg, 1.0);
-    // Middle player scales proportionally
+    const highAvg = res.get("pHigh")?.avg ?? 0;
+    const lowAvg = res.get("pLow")?.avg ?? 0;
     const midAvg = res.get("pMid")?.avg ?? 0;
-    assert.ok(midAvg > 1.0 && midAvg < 5.0);
+
+    // Highest player (pHigh) reaches between 4.8 and 4.9
+    assert.ok(highAvg >= 4.8 && highAvg <= 4.9, `expected highAvg between 4.8 and 4.9, got ${highAvg}`);
+    // Lowest player (pLow) reaches between 1.1 and 1.2
+    assert.ok(lowAvg >= 1.1 && lowAvg <= 1.2, `expected lowAvg between 1.1 and 1.2, got ${lowAvg}`);
+    // Middle player scales proportionally
+    assert.ok(midAvg > lowAvg && midAvg < highAvg);
   });
 });
 
