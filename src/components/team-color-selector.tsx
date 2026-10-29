@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { Check, Hand } from "lucide-react";
+import { motion } from "motion/react";
 import { setAttendanceTeam, setAttendanceGoalkeeper } from "@/app/admin/actions";
 import { cn } from "@/lib/utils";
 
@@ -62,7 +63,12 @@ export function TeamColorSelector({
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      <div className="inline-flex items-center gap-1.5 p-1 rounded-xl bg-paper-dark/75 border border-moss/15 shadow-2xs">
+      {/* Segmented Pill Container */}
+      <div
+        role="group"
+        aria-label="Selecionar cor do time"
+        className="relative inline-flex items-center gap-1 p-1 rounded-full bg-paper-dark/80 border border-moss/15 shadow-2xs backdrop-blur-xs select-none"
+      >
         {TEAMS.map((t) => {
           const isSelected = currentTeam === t.id;
           return (
@@ -71,29 +77,38 @@ export function TeamColorSelector({
               type="button"
               disabled={disabled || pending}
               onClick={() => handleSelectTeam(t.id)}
+              aria-pressed={isSelected}
               title={`Time ${t.label}${isSelected ? " (Selecionado - clique para remover)" : ""}`}
               className={cn(
-                "size-7 rounded-full transition-all flex items-center justify-center cursor-pointer select-none active:scale-95 border",
-                t.colorClass,
-                isSelected
-                  ? "ring-2 ring-moss ring-offset-2 ring-offset-paper opacity-100"
-                  : "opacity-40 hover:opacity-85 border-transparent",
+                "relative size-7 rounded-full transition-transform flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-moss",
                 pending && "opacity-50 cursor-wait",
               )}
             >
+              {/* Animated highlight sliding capsule */}
               {isSelected && (
-                <span
-                  className={cn(
-                    "size-2 rounded-full",
-                    t.id === "amarelo" ? "bg-amber-950" : "bg-white",
-                  )}
+                <motion.div
+                  layoutId={`activeTeamColor-${attendanceId}`}
+                  transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                  className="absolute inset-0 rounded-full border-2 border-moss bg-paper/40 pointer-events-none"
                 />
               )}
+
+              {/* Sleek solid color dot */}
+              <span
+                className={cn(
+                  "size-4 rounded-full border transition-all duration-200",
+                  t.colorClass,
+                  isSelected
+                    ? "scale-100 shadow-2xs"
+                    : "opacity-45 hover:opacity-85 scale-90",
+                )}
+              />
             </button>
           );
         })}
       </div>
 
+      {/* Botão de Goleiro Fixo [GL] */}
       {playerId && (
         <button
           type="button"
@@ -101,10 +116,10 @@ export function TeamColorSelector({
           onClick={handleToggleGk}
           title={isGoalkeeper ? "Goleiro fixo (clique para remover)" : "Definir como Goleiro Fixo"}
           className={cn(
-            "h-7 px-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 border cursor-pointer select-none active:scale-95 shadow-2xs",
+            "h-7 px-2.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 border cursor-pointer select-none hover:scale-105 active:scale-95 shadow-2xs",
             isGoalkeeper
-              ? "bg-amber-400/25 text-amber-950 border-amber-600/50 font-black shadow-xs ring-2 ring-amber-500/50"
-              : "bg-paper-dark/75 text-moss-soft border-moss/15 hover:text-moss hover:bg-paper-dark",
+              ? "bg-amber-400/25 text-amber-950 border-amber-600/50 font-black shadow-xs ring-2 ring-amber-500/40"
+              : "bg-paper-dark/80 text-moss-soft border-moss/15 hover:text-moss hover:bg-paper-dark",
             pending && "opacity-50 cursor-wait",
           )}
         >
