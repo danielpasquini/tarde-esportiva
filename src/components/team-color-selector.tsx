@@ -25,7 +25,7 @@ const TEAMS = [
   {
     id: "amarelo",
     label: "Amarelo",
-    colorClass: "bg-amber-400 border-amber-500",
+    colorClass: "bg-yellow-400 border-yellow-500",
   },
 ] as const;
 
@@ -89,7 +89,7 @@ export function TeamColorSelector({
                 <motion.div
                   layoutId={`activeTeamColor-${attendanceId}`}
                   transition={{ type: "spring", stiffness: 450, damping: 32 }}
-                  className="absolute inset-0 rounded-full border-2 border-moss bg-paper/40 pointer-events-none"
+                  className="absolute inset-0 rounded-full border-2 border-moss bg-transparent pointer-events-none"
                 />
               )}
 

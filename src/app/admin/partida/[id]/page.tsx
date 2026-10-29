@@ -330,12 +330,17 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
 
         {/* Adicionar Jogadores à Partida */}
         <div className="mt-2 pt-4 border-t border-moss/10 flex flex-col gap-4">
-          <h3 className="font-serif text-lg text-moss">Adicionar Jogadores</h3>
+          <div className="flex items-center justify-between border-b border-moss/10 pb-2">
+            <h3 className="font-serif text-lg text-moss">Adicionar Jogadores</h3>
+            <span className="hud-tag bg-paper-dark text-moss font-mono text-[10px]">
+              {availablePlayers.length} disponíveis
+            </span>
+          </div>
 
           {availablePlayers.length > 0 ? (
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-moss-soft">
-                Selecionar do Cadastro ({availablePlayers.length} disponíveis)
+                Selecionar do Cadastro
               </span>
               <AttendanceChecklist
                 players={availablePlayers.map((p) => ({
@@ -354,20 +359,25 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
           )}
 
           {/* Colar lista de nomes */}
-          <details className="border-t border-moss/10 pt-2">
-            <summary className="text-xs font-extrabold uppercase tracking-wider text-brick cursor-pointer underline">
-              + Adicionar por Lista de Nomes (Colar texto ou lista numerada)
+          <details className="border-t border-moss/10 pt-2 group">
+            <summary className="text-[11px] font-bold text-moss-soft hover:text-moss cursor-pointer list-none flex items-center gap-1.5 transition-colors select-none py-1">
+              <span className="text-brick font-extrabold text-sm leading-none">+</span>
+              <span>Adicionar lista de nomes</span>
             </summary>
-            <form action={addAttendancesByText.bind(null, match.id)} className="flex flex-col gap-2 mt-3">
+            <form action={addAttendancesByText.bind(null, match.id)} className="flex flex-col gap-2 mt-3 p-3 rounded-xl bg-white/70 border border-moss/15 shadow-2xs">
+              <label htmlFor="namesList" className="text-[11px] font-medium text-moss-soft">
+                Cole a lista (um por linha ou numerada):
+              </label>
               <textarea
+                id="namesList"
                 name="names"
                 rows={4}
-                className="w-full rounded-lg border border-moss/20 focus:border-moss bg-white/85 px-3 py-2 text-xs font-mono text-moss outline-none"
+                className="w-full rounded-lg border border-moss/20 focus:border-moss bg-paper/90 px-3 py-2 text-xs font-mono text-moss outline-none transition-colors"
                 placeholder={`1. Paulo Ricardo\n2. Tuguinho\n3. Ricardo...`}
                 required
               />
-              <SubmitButton className="bg-moss text-paper hover:bg-moss-soft py-2 text-xs font-extrabold uppercase tracking-wider shadow-hard-sm border-transparent">
-                Importar e Adicionar à Partida
+              <SubmitButton className="bg-moss text-paper hover:bg-moss-soft py-2 text-xs font-extrabold uppercase tracking-wider shadow-hard-sm border-transparent self-end px-4">
+                Importar Lista
               </SubmitButton>
             </form>
           </details>

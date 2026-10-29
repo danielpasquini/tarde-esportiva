@@ -53,13 +53,13 @@ export function AttendanceChecklist({
   return (
     <form action={action} className="flex flex-col gap-3">
       {/* Barra de controle: Selecionar tudo / Limpar tudo */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-paper-dark border border-moss/20 p-2 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-paper-dark/80 border border-moss/15 rounded-xl p-2.5 text-xs shadow-2xs">
         <label className="flex items-center gap-2 cursor-pointer font-bold uppercase tracking-wider text-moss text-[11px] select-none">
           <input
             type="checkbox"
             checked={allSelected}
             onChange={handleToggleAll}
-            className="size-4 accent-moss"
+            className="size-4 accent-moss rounded"
             aria-label="Selecionar ou desmarcar todos"
           />
           <span>{allSelected ? "Desmarcar Todos" : "Selecionar Tudo"}</span>
@@ -72,7 +72,7 @@ export function AttendanceChecklist({
           <button
             type="button"
             onClick={selectAll}
-            className="border border-moss bg-paper px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-moss hover:bg-paper-dark transition-colors shadow-none active:translate-y-0.5"
+            className="border border-moss/20 bg-paper px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-moss hover:bg-paper-dark rounded-md transition-colors active:scale-95 cursor-pointer shadow-2xs"
           >
             Selecionar Tudo
           </button>
@@ -80,7 +80,7 @@ export function AttendanceChecklist({
             type="button"
             onClick={clearAll}
             disabled={selectedIds.size === 0}
-            className="border border-moss/40 bg-paper px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-moss-soft hover:bg-paper-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-none active:translate-y-0.5"
+            className="border border-moss/15 bg-paper px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-moss-soft hover:bg-paper-dark disabled:opacity-40 disabled:cursor-not-allowed rounded-md transition-colors active:scale-95 cursor-pointer shadow-2xs"
           >
             Limpar Tudo
           </button>
@@ -88,14 +88,14 @@ export function AttendanceChecklist({
       </div>
 
       {/* Lista com scroll */}
-      <div className="max-h-56 overflow-y-auto space-y-1 p-2 bg-paper-dark border border-moss/30 rounded-xs">
+      <div className="max-h-56 overflow-y-auto space-y-1 p-2 bg-white/75 border border-moss/15 rounded-xl shadow-2xs divide-y divide-moss/5">
         {players.map((p) => {
           const isChecked = selectedIds.has(p.id);
           return (
             <label
               key={p.id}
-              className={`flex items-center gap-2 text-xs p-1.5 cursor-pointer transition-colors select-none ${
-                isChecked ? "bg-paper font-semibold shadow-xs" : "hover:bg-paper/60"
+              className={`flex items-center gap-2 text-xs p-2 rounded-lg cursor-pointer transition-colors select-none ${
+                isChecked ? "bg-moss/8 font-semibold text-moss" : "hover:bg-paper-dark/40 text-moss"
               }`}
             >
               <input
@@ -104,7 +104,7 @@ export function AttendanceChecklist({
                 value={p.id}
                 checked={isChecked}
                 onChange={() => toggle(p.id)}
-                className="size-4 accent-moss"
+                className="size-4 accent-moss rounded"
               />
               <span className="truncate">{p.name}</span>
               {p.isGoalkeeper && <GloveBadge />}
@@ -117,7 +117,7 @@ export function AttendanceChecklist({
       </div>
 
       <SubmitButton
-        className="w-full bg-moss text-paper hover:bg-moss-soft py-2.5 text-xs font-bold uppercase tracking-wider"
+        className="w-full bg-moss text-paper hover:bg-moss-soft py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl shadow-hard-sm border-transparent"
         disabled={selectedIds.size === 0}
       >
         Confirmar {selectedIds.size > 0 ? `(${selectedIds.size}) ` : ""}Jogadores Selecionados
