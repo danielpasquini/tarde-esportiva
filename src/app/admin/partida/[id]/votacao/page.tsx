@@ -14,6 +14,7 @@ import SpotlightCard from "@/components/SpotlightCard";
 import CountUp from "@/components/CountUp";
 import SplitText from "@/components/SplitText";
 import ShinyText from "@/components/ShinyText";
+import { VotingAuditor } from "@/components/voting-auditor";
 
 export const metadata = { title: "Ver Votação • Organizador" };
 
@@ -46,6 +47,74 @@ async function MatchVotingAdminView({ params }: { params: Promise<{ id: string }
 
   const voterIds = new Set(distinctVoters.map((v) => v.voterId));
   const robustMap = computeMatchRobustAverages(votes);
+
+  // Mapeamento de jogadores para auditoria
+  const playerMap = new Map(
+    attendances.map((att) => [
+      att.playerId,
+      {
+        id: att.playerId,
+        name: att.player.name,
+        team: att.team,
+        isGoalkeeper: att.asGoalkeeper || att.player.isGoalkeeper,
+      },
+    ])
+  );
+
+  // Votos agrupados por votante e cálculo de outliers (1.0 ou 5.0)
+  const votesByVoterGroup: Record<
+    string,
+    { targetId: string; targetName: string; targetTeam: string | null; targetIsGoalkeeper: boolean; score: number }[]
+  > = {};
+
+  const outliers: {
+    voterId: string;
+    voterName: string;
+    targetId: string;
+    targetName: string;
+    targetTeam: string | null;
+    score: number;
+  }[] = [];
+
+  for (const v of votes) {
+    const voter = playerMap.get(v.voterId);
+    const target = playerMap.get(v.targetId);
+    const voterName = voter?.name ?? "Jogador";
+    const targetName = target?.name ?? "Jogador";
+    const targetTeam = target?.team ?? null;
+    const targetIsGoalkeeper = target?.isGoalkeeper ?? false;
+
+    if (!votesByVoterGroup[v.voterId]) {
+      votesByVoterGroup[v.voterId] = [];
+    }
+    votesByVoterGroup[v.voterId].push({
+      targetId: v.targetId,
+      targetName,
+      targetTeam,
+      targetIsGoalkeeper,
+      score: v.score,
+    });
+
+    if (v.score <= 1.0 || v.score >= 5.0) {
+      outliers.push({
+        voterId: v.voterId,
+        voterName,
+        targetId: v.targetId,
+        targetName,
+        targetTeam,
+        score: v.score,
+      });
+    }
+  }
+
+  // Lista de votantes ordenados com contagem de votos
+  const votersList = Array.from(voterIds)
+    .map((vid) => ({
+      id: vid,
+      name: playerMap.get(vid)?.name ?? "Jogador",
+      voteCount: votesByVoterGroup[vid]?.length ?? 0,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const sorted = attendances
     .map((att) => {
@@ -227,6 +296,15 @@ async function MatchVotingAdminView({ params }: { params: Promise<{ id: string }
         ) : (
           <p className="text-xs text-moss-soft">Nenhum jogador confirmado para esta partida.</p>
         )}
+      </SpotlightCard>
+
+      {/* Auditoria de Votação: Outliers e Inspeção por Votante */}
+      <SpotlightCard className="border border-moss/15 bg-paper p-4 sm:p-5 rounded-2xl shadow-hard flex flex-col gap-4">
+        <VotingAuditor
+          outliers={outliers}
+          voters={votersList}
+          votesByVoter={votesByVoterGroup}
+        />
       </SpotlightCard>
     </div>
   );

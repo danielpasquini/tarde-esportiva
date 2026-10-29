@@ -28,37 +28,70 @@ export function computeMatchRobustAverages(
   const result = new Map<string, { avg: number; count: number }>();
   if (!votes.length) return result;
 
-  // 1. Agrupar votos por votante para calcular perfil de dispersão
-  const votesByVoter = new Map<string, number[]>();
+  // 1. Agrupar votos por votante para calcular perfil de dispersão e calibrar votos individuais
+  // - Votos muito conservadores (concentrados no meio, ex: desvio padrão muito baixo ao redor de 3.0):
+  //   são esticados a partir do centro para recuperar a diferenciação dos atletas.
+  // - Votos com amplitude excessiva ou sem critério: são moderados/amortecidos.
+  const votesByVoter = new Map<string, { targetId: string; score: number }[]>();
   for (const v of votes) {
     const list = votesByVoter.get(v.voterId) ?? [];
-    list.push(v.score);
+    list.push({ targetId: v.targetId, score: v.score });
     votesByVoter.set(v.voterId, list);
   }
 
-  // Peso de confiabilidade de cada votante (0.4 a 1.0)
-  // Votantes com variância muito baixa que dão a mesma nota para todo mundo recebem peso menor
-  const voterWeights = new Map<string, number>();
-  for (const [voterId, scores] of votesByVoter.entries()) {
-    if (scores.length >= 3) {
-      const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
-      const variance = scores.reduce((acc, s) => acc + Math.pow(s - mean, 2), 0) / scores.length;
-      // Se não há variabilidade (deu mesma nota para todos), peso amortecido
-      if (variance < 0.08) {
-        voterWeights.set(voterId, 0.5);
-      } else {
-        voterWeights.set(voterId, 1.0);
+  // Mapa de notas ajustadas por votante
+  const adjustedVotes: { voterId: string; targetId: string; score: number; weight: number }[] = [];
+
+  for (const [voterId, userVotes] of votesByVoter.entries()) {
+    const count = userVotes.length;
+    if (count < 3) {
+      // Poucos votos: mantém notas e peso padrão
+      for (const uv of userVotes) {
+        adjustedVotes.push({ voterId, targetId: uv.targetId, score: uv.score, weight: 1.0 });
       }
-    } else {
-      voterWeights.set(voterId, 1.0);
+      continue;
+    }
+
+    const scores = userVotes.map((u) => u.score);
+    const mean = scores.reduce((a, b) => a + b, 0) / count;
+    const variance = scores.reduce((acc, s) => acc + Math.pow(s - mean, 2), 0) / count;
+    const stdDev = Math.sqrt(variance);
+
+    // Variância praticamente zero (deu a mesma nota para todos, ex: tudo 5 ou tudo 3)
+    if (stdDev < 0.2) {
+      for (const uv of userVotes) {
+        adjustedVotes.push({ voterId, targetId: uv.targetId, score: uv.score, weight: 0.5 });
+      }
+      continue;
+    }
+
+    // Se as notas forem muito conservadoras (aglomeradas no meio perto de 3.0, com baixo desvio < 0.6)
+    // Realiza um estiramento individual moderado a partir da média do votante
+    let stretchFactor = 1.0;
+    let voterWeight = 1.0;
+
+    if (stdDev < 0.6) {
+      // Votos conservadores no centro: estira as diferenças em relação à média
+      stretchFactor = 1.35;
+      voterWeight = 1.0;
+    } else if (stdDev > 1.4) {
+      // Votante com amplitude extrema / volátil: amortece o peso e comprime levemente em direção ao centro
+      stretchFactor = 0.85;
+      voterWeight = 0.8;
+    }
+
+    for (const uv of userVotes) {
+      const stretched = mean + (uv.score - mean) * stretchFactor;
+      const clamped = Math.max(MIN_SCORE, Math.min(MAX_SCORE, stretched));
+      adjustedVotes.push({ voterId, targetId: uv.targetId, score: clamped, weight: voterWeight });
     }
   }
 
-  // 2. Agrupar votos por atleta avaliado (targetId)
-  const votesByTarget = new Map<string, { voterId: string; score: number }[]>();
-  for (const v of votes) {
+  // 2. Agrupar votos ajustados por atleta avaliado (targetId)
+  const votesByTarget = new Map<string, { voterId: string; score: number; weight: number }[]>();
+  for (const v of adjustedVotes) {
     const list = votesByTarget.get(v.targetId) ?? [];
-    list.push({ voterId: v.voterId, score: v.score });
+    list.push({ voterId: v.voterId, score: v.score, weight: v.weight });
     votesByTarget.set(v.targetId, list);
   }
 
@@ -77,7 +110,7 @@ export function computeMatchRobustAverages(
 
     for (let i = 0; i < sorted.length; i++) {
       const item = sorted[i];
-      let itemWeight = voterWeights.get(item.voterId) ?? 1.0;
+      let itemWeight = item.weight;
 
       // Se há 4 ou mais avaliações, atenua os extremos (mínimo e máximo)
       if (count >= 4 && (i === 0 || i === sorted.length - 1)) {
@@ -107,12 +140,19 @@ export function computeMatchRobustAverages(
     return result;
   }
 
-  // Calcular média simples de cada jogador avaliado para avaliar as condições
+  // Calcular média simples de cada jogador avaliado a partir dos votos brutos para avaliar as condições
+  const rawTargetScores = new Map<string, number[]>();
+  for (const v of votes) {
+    const list = rawTargetScores.get(v.targetId) ?? [];
+    list.push(v.score);
+    rawTargetScores.set(v.targetId, list);
+  }
+
   let highestSimpleAvg = -Infinity;
   let lowestSimpleAvg = Infinity;
-  for (const [, targetVotes] of votesByTarget.entries()) {
-    if (!targetVotes.length) continue;
-    const simpleAvg = targetVotes.reduce((sum, v) => sum + v.score, 0) / targetVotes.length;
+  for (const [, scores] of rawTargetScores.entries()) {
+    if (!scores.length) continue;
+    const simpleAvg = scores.reduce((sum, s) => sum + s, 0) / scores.length;
     if (simpleAvg > highestSimpleAvg) highestSimpleAvg = simpleAvg;
     if (simpleAvg < lowestSimpleAvg) lowestSimpleAvg = simpleAvg;
   }
