@@ -96,10 +96,10 @@ export function TeamColorSelector({
               {/* Sleek solid color dot */}
               <span
                 className={cn(
-                  "size-4 rounded-full border transition-all duration-200",
+                  "size-4 rounded-full border transition-all duration-150",
                   t.colorClass,
                   isSelected
-                    ? "scale-100 shadow-2xs"
+                    ? "scale-100 ring-2 ring-moss ring-offset-1 ring-offset-paper"
                     : "opacity-45 hover:opacity-85 scale-90",
                 )}
               />

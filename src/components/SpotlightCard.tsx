@@ -49,8 +49,8 @@ const THEMES: Record<'dark' | 'light', Palette> = {
     border: 'rgba(26, 46, 34, 0.12)',
     shadow: '4px 4px 0 0 #1a2e22',
     light: '#b47a16',
-    fill: 0.45,
-    edge: 0.85
+    fill: 0,
+    edge: 0.25
   }
 };
 

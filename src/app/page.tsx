@@ -197,7 +197,7 @@ async function ActiveMatchCard() {
                     >
                       <div className="flex items-center justify-between px-3 py-2 border-b border-moss/10 bg-paper-dark/60">
                         <div className="flex items-center gap-2">
-                          <span className={`size-2.5 rounded-full ${config.dot} ${config.glow}`} />
+                          <span className={`size-2.5 rounded-full ${config.dot}`} />
                           <h4 className="font-serif text-sm font-bold text-moss">
                             Time {config.label}
                           </h4>

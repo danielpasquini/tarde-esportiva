@@ -127,13 +127,17 @@ export function computeMatchRobustAverages(
 
   if (unscaledAverages.length === 0) return result;
 
-  // 4. Estiramento Proporcional da Partida (Proportional Variance Stretch)
-  // Em vez de forçar as notas em valores fixos arbitrários, o estiramento atua de forma
-  // estritamente proporcional à distribuição real dos votos da partida:
-  // - Preserva a média geral da partida (centro de gravidade).
-  // - Aplica um fator de ampliação contínuo e proporcional à variância coletiva,
-  //   expandindo suavemente quem jogou melhor para cima e quem jogou pior para baixo.
-  // - Respeita naturalmente os limites [MIN_SCORE, MAX_SCORE] sem cortes artificiais.
+  // 4. Estiramento Proporcional da Partida (Proportional Variance Stretch por Intervalos)
+  // Lógica de amplitude:
+  // - Se uma média normal simples passou de 4.0:
+  //   o teto estira proporcionalmente para o intervalo [4.6, 5.0] (4.6, 4.7, 4.8, 4.9 ou 5.0)
+  //   dependendo do quão longe o destaque ficou do restante da partida.
+  // - Se nenhum jogador passou de 4.0:
+  //   o teto estira suavemente no intervalo [4.1, 4.5].
+  // - O mesmo princípio se aplica ao limite inferior:
+  //   se alguém ficou abaixo de 2.0, o piso estira para [1.0, 1.4]; se ninguém ficou abaixo de 2.0,
+  //   o piso estira para [1.5, 1.9].
+  // - Todos os intervalos intermediários seguem a amplitude proporcional contínua.
   if (unscaledAverages.length === 1) {
     const only = unscaledAverages[0];
     const rounded = Math.round(Math.max(MIN_SCORE, Math.min(MAX_SCORE, only.avg)) * 10) / 10;
@@ -141,28 +145,80 @@ export function computeMatchRobustAverages(
     return result;
   }
 
-  // Média global das avaliações da partida
+  // Obter médias simples dos atletas avaliados para calibração das metas
+  const rawTargetScores = new Map<string, number[]>();
+  for (const v of votes) {
+    const list = rawTargetScores.get(v.targetId) ?? [];
+    list.push(v.score);
+    rawTargetScores.set(v.targetId, list);
+  }
+
+  let highestSimpleAvg = -Infinity;
+  let lowestSimpleAvg = Infinity;
+  for (const [, scores] of rawTargetScores.entries()) {
+    if (!scores.length) continue;
+    const simpleAvg = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+    if (simpleAvg > highestSimpleAvg) highestSimpleAvg = simpleAvg;
+    if (simpleAvg < lowestSimpleAvg) lowestSimpleAvg = simpleAvg;
+  }
+
+  // Média global da partida
   const matchMean = unscaledAverages.reduce((sum, item) => sum + item.avg, 0) / unscaledAverages.length;
 
-  let maxDeviation = 0;
+  let maxPositiveDev = 0;
+  let maxNegativeDev = 0;
   for (const item of unscaledAverages) {
-    const dev = Math.abs(item.avg - matchMean);
-    if (dev > maxDeviation) maxDeviation = dev;
+    if (item.avg > matchMean) {
+      maxPositiveDev = Math.max(maxPositiveDev, item.avg - matchMean);
+    } else {
+      maxNegativeDev = Math.max(maxNegativeDev, matchMean - item.avg);
+    }
   }
 
-  // Fator proporcional de ampliação: se a dispersão entre atletas for estreita,
-  // expande proporcionalmente as diferenças sem deformar o ordenamento relativo.
-  let stretchFactor = 1.0;
-  if (maxDeviation > 0.001) {
-    // Espaço disponível até as bordas (1.0 ou 5.0) a partir do centro
-    const availableHeadroom = matchMean >= 3.0 ? 5.0 - matchMean : matchMean - 1.0;
-    // O fator expande a amplitude de forma suave e contínua proporcional ao headroom disponível
-    stretchFactor = Math.min(1.5, Math.max(1.0, (availableHeadroom * 0.9) / maxDeviation));
+  // Determinar o teto de estiramento superior:
+  // Se passou de 4.0: meta entre 4.6 e 5.0 proporcional à distância (maxPositiveDev)
+  // Se não passou: meta entre 4.1 e 4.5
+  let targetMax: number;
+  if (highestSimpleAvg > 4.0) {
+    // Quão destacado ficou: de 4.6 até 5.0
+    const prominence = Math.min(1.0, Math.max(0.0, (highestSimpleAvg - 4.0) / 0.8 + maxPositiveDev * 0.3));
+    targetMax = 4.6 + prominence * 0.4; // 4.6 a 5.0
+  } else {
+    const prominence = Math.min(1.0, Math.max(0.0, maxPositiveDev / 1.0));
+    targetMax = 4.1 + prominence * 0.4; // 4.1 a 4.5
   }
 
+  // Determinar o piso de estiramento inferior:
+  // Se ficou abaixo de 2.0: meta entre 1.0 e 1.4 proporcional ao distanciamento inferior
+  // Se não ficou abaixo de 2.0: meta entre 1.5 e 1.9
+  let targetMin: number;
+  if (lowestSimpleAvg < 2.0) {
+    const prominence = Math.min(1.0, Math.max(0.0, (2.0 - lowestSimpleAvg) / 0.8 + maxNegativeDev * 0.3));
+    targetMin = 1.4 - prominence * 0.4; // 1.4 descendo até 1.0
+  } else {
+    const prominence = Math.min(1.0, Math.max(0.0, maxNegativeDev / 1.0));
+    targetMin = 1.9 - prominence * 0.4; // 1.9 descendo até 1.5
+  }
+
+  let minUnscaled = Infinity;
+  let maxUnscaled = -Infinity;
   for (const item of unscaledAverages) {
-    const stretched = matchMean + (item.avg - matchMean) * stretchFactor;
-    const clamped = Math.max(MIN_SCORE, Math.min(MAX_SCORE, stretched));
+    if (item.avg < minUnscaled) minUnscaled = item.avg;
+    if (item.avg > maxUnscaled) maxUnscaled = item.avg;
+  }
+
+  const span = maxUnscaled - minUnscaled;
+
+  for (const item of unscaledAverages) {
+    let finalAvg: number;
+    if (span < 0.001) {
+      finalAvg = item.avg;
+    } else {
+      const normalized = (item.avg - minUnscaled) / span;
+      finalAvg = targetMin + normalized * (targetMax - targetMin);
+    }
+
+    const clamped = Math.max(MIN_SCORE, Math.min(MAX_SCORE, finalAvg));
     const roundedAvg = Math.round(clamped * 10) / 10;
     result.set(item.targetId, { avg: roundedAvg, count: item.count });
   }

@@ -89,11 +89,12 @@ describe("Unit Tests — Rating & Medals (src/lib/rating.ts)", () => {
     // pC: (5.0*0.5 + 4.0*1.0) / 1.5 = 4.3333 (max)
     // Mean: (3.6667 + 2.3333 + 4.3333) / 3 = 3.4444
     // Proportional stretch preserves relative order: pC > pA > pB
+    // Simple average of pC was 4.5 (>4.0), stretching the top to 5.0
     assert.ok(Number(robust.get("pC")?.avg) > Number(robust.get("pA")?.avg));
     assert.ok(Number(robust.get("pA")?.avg) > Number(robust.get("pB")?.avg));
-    assert.equal(robust.get("pC")?.avg, 4.6);
-    assert.equal(robust.get("pB")?.avg, 2.0);
-    assert.equal(robust.get("pA")?.avg, 3.7);
+    assert.equal(robust.get("pC")?.avg, 5.0);
+    assert.equal(robust.get("pB")?.avg, 1.5);
+    assert.equal(robust.get("pA")?.avg, 3.8);
 
     // Test outlier downweighting when >= 4 votes:
     const targetWithOutliers = [

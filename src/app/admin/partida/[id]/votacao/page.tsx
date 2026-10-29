@@ -301,6 +301,7 @@ async function MatchVotingAdminView({ params }: { params: Promise<{ id: string }
       {/* Auditoria de Votação: Outliers e Inspeção por Votante */}
       <SpotlightCard className="border border-moss/15 bg-paper p-4 sm:p-5 rounded-2xl shadow-hard flex flex-col gap-4">
         <VotingAuditor
+          matchId={match.id}
           outliers={outliers}
           voters={votersList}
           votesByVoter={votesByVoterGroup}

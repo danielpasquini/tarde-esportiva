@@ -381,3 +381,59 @@ export async function resetPlayerPin(playerId: string) {
   revalidatePath(`/perfil/${playerId}`);
   revalidatePath(`/historico`);
 }
+
+/** Permite ao organizador editar ou criar o voto de um avaliador para um atleta */
+export async function adminUpdateVote(matchId: string, voterId: string, targetId: string, score: number) {
+  await requireAdmin();
+  const validScore = normalizeScore(score);
+  if (!validScore) return;
+
+  await db.vote.upsert({
+    where: {
+      matchId_voterId_targetId: {
+        matchId,
+        voterId,
+        targetId,
+      },
+    },
+    update: { score: validScore },
+    create: {
+      matchId,
+      voterId,
+      targetId,
+      score: validScore,
+    },
+  });
+
+  touch(matchId);
+  revalidatePath(`/admin/partida/${matchId}/votacao`);
+}
+
+/** Permite ao organizador resetar (excluir) todos os votos emitidos por um jogador específico na partida */
+export async function adminResetVoterVotes(matchId: string, voterId: string) {
+  await requireAdmin();
+  await db.vote.deleteMany({
+    where: {
+      matchId,
+      voterId,
+    },
+  });
+
+  touch(matchId);
+  revalidatePath(`/admin/partida/${matchId}/votacao`);
+}
+
+/** Permite ao organizador excluir um voto específico emitido de um votante para um atleta */
+export async function adminDeleteSingleVote(matchId: string, voterId: string, targetId: string) {
+  await requireAdmin();
+  await db.vote.deleteMany({
+    where: {
+      matchId,
+      voterId,
+      targetId,
+    },
+  });
+
+  touch(matchId);
+  revalidatePath(`/admin/partida/${matchId}/votacao`);
+}
