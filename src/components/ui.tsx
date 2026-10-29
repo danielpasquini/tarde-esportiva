@@ -61,6 +61,21 @@ export function TeamColorBadge({
   const config = TEAM_COLORS[normalized];
   if (!config) return null;
 
+  if (!showLabel) {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center justify-center size-3.5 rounded-full shrink-0 border select-none align-middle shadow-2xs",
+          config.dot,
+          config.glow,
+          config.border,
+          className,
+        )}
+        title={`Time ${config.label}`}
+      />
+    );
+  }
+
   return (
     <span
       className={cn(
@@ -73,11 +88,7 @@ export function TeamColorBadge({
       title={`Time ${config.label}`}
     >
       <span className={cn("size-2 rounded-full shrink-0", config.dot, config.glow)} />
-      {showLabel ? (
-        <span>{config.label}</span>
-      ) : (
-        <span className="font-mono text-[9px] opacity-75">{config.label.slice(0, 3)}</span>
-      )}
+      <span>{config.label}</span>
     </span>
   );
 }

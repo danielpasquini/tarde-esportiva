@@ -74,7 +74,7 @@ export function TeamColorSelector({
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      <div className="inline-flex items-center gap-1.5 p-1 rounded-xl bg-paper-dark/80 border border-moss/15 shadow-2xs">
+      <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-paper-dark/75 border border-moss/15 shadow-2xs">
         {TEAMS.map((t) => {
           const isSelected = currentTeam === t.id;
           return (
@@ -85,16 +85,14 @@ export function TeamColorSelector({
               onClick={() => handleSelectTeam(t.id)}
               title={`Time ${t.label}${isSelected ? " (Selecionado - clique para remover)" : ""}`}
               className={cn(
-                "h-8 min-w-[34px] sm:min-w-[40px] px-2.5 rounded-lg text-xs font-extrabold uppercase transition-all flex items-center justify-center gap-1.5 border cursor-pointer select-none active:scale-95",
+                "size-7 rounded-lg transition-all flex items-center justify-center border cursor-pointer select-none active:scale-90",
                 isSelected
-                  ? `${t.activeClass} scale-102`
-                  : `${t.inactiveClass} opacity-85 hover:opacity-100`,
+                  ? `${t.activeClass} scale-105`
+                  : "bg-white/80 border-moss/15 hover:bg-white hover:scale-105 opacity-80 hover:opacity-100",
                 pending && "opacity-50 cursor-wait",
               )}
             >
-              <span className={cn("size-3 rounded-full shrink-0 border border-white/30", t.dotClass)} />
-              <span className="text-[11px] font-bold">{t.label}</span>
-              {isSelected && <Check className="size-3 shrink-0 stroke-[3]" />}
+              <span className={cn("size-3 rounded-full shrink-0 border border-white/40", t.dotClass)} />
             </button>
           );
         })}
@@ -107,15 +105,15 @@ export function TeamColorSelector({
           onClick={handleToggleGk}
           title={isGoalkeeper ? "Goleiro fixo (clique para remover)" : "Definir como Goleiro Fixo"}
           className={cn(
-            "h-8 px-3 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 border cursor-pointer select-none active:scale-95 shadow-2xs",
+            "h-7 px-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 border cursor-pointer select-none active:scale-95 shadow-2xs",
             isGoalkeeper
               ? "bg-amber-400/25 text-amber-950 border-amber-600/50 font-black shadow-xs ring-2 ring-amber-500/50"
-              : "bg-paper-dark/80 text-moss-soft border-moss/15 hover:text-moss hover:bg-paper-dark",
+              : "bg-paper-dark/75 text-moss-soft border-moss/15 hover:text-moss hover:bg-paper-dark",
             pending && "opacity-50 cursor-wait",
           )}
         >
           <Hand className="size-3.5 text-amber-800 shrink-0 fill-amber-500/40" strokeWidth={2.4} />
-          <span className="text-[11px]">Goleiro</span>
+          <span className="text-[10px]">GL</span>
           {isGoalkeeper && <Check className="size-3 shrink-0 text-amber-900 stroke-[3]" />}
         </button>
       )}
