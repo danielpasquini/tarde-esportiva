@@ -29,9 +29,8 @@ export function cleanPlayerName(raw: string): string {
 /**
  * Faz o parse de listas de texto livre ou numeradas.
  * Exemplo:
- * "1. Paulo Ricardo
- *  2. Tuguinho
- *  13. marcio14.  Godoy"
+ * "1. Nome Sobrenome
+ *  2. Outro Atleta"
  */
 export function parseNumberedRoster(text: string): string[] {
   if (!text) return [];

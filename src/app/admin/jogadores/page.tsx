@@ -102,14 +102,14 @@ async function Players() {
           <form action={importPlayersBatch} className="flex flex-col gap-3 mt-3">
             <div>
               <label htmlFor="batch-names" className="block text-[10px] font-extrabold uppercase tracking-wider text-moss-soft mb-1">
-                Cole a lista (ex: 1. Paulo Ricardo, 2. Tuguinho...)
+                Cole a lista (um nome por linha ou lista numerada)
               </label>
               <textarea
                 id="batch-names"
                 name="names"
                 rows={5}
                 className="w-full rounded-lg border border-moss/20 focus:border-moss bg-white/85 px-3 py-2 text-xs font-mono text-moss outline-none"
-                placeholder={`1. Paulo Ricardo\n2. Tuguinho\n3. Ricardo\n4. Reinaldo...`}
+                placeholder={`1. Nome Sobrenome\n2. Nome Sobrenome\n3. Nome Sobrenome...`}
                 required
               />
             </div>

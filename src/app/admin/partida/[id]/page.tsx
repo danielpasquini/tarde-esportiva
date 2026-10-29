@@ -373,7 +373,7 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
                 name="names"
                 rows={4}
                 className="w-full rounded-lg border border-moss/20 focus:border-moss bg-paper/90 px-3 py-2 text-xs font-mono text-moss outline-none transition-colors"
-                placeholder={`1. Paulo Ricardo\n2. Tuguinho\n3. Ricardo...`}
+                placeholder={`1. Nome Sobrenome\n2. Nome Sobrenome\n3. Nome Sobrenome...`}
                 required
               />
               <SubmitButton className="bg-moss text-paper hover:bg-moss-soft py-2 text-xs font-extrabold uppercase tracking-wider shadow-hard-sm border-transparent self-end px-4">
