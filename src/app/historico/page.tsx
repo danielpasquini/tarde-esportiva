@@ -19,9 +19,16 @@ async function History() {
   await connection();
   const isOrganizer = await isAdmin();
 
-  const [finishedMatches, allMatchesFallback, allMatchesList, players, finishedVotes] = await Promise.all([
+  const now = new Date();
+
+  const [finishedMatches, allMatchesList, players, finishedVotes] = await Promise.all([
     db.match.findMany({
-      where: { status: "FINISHED" },
+      where: {
+        OR: [
+          { status: "FINISHED" },
+          { date: { lte: now } },
+        ],
+      },
       orderBy: { date: "desc" },
       take: 5,
       include: {
@@ -29,13 +36,12 @@ async function History() {
       },
     }),
     db.match.findMany({
-      orderBy: { date: "desc" },
-      take: 5,
-      include: {
-        _count: { select: { attendances: true } },
+      where: {
+        OR: [
+          { status: "FINISHED" },
+          { date: { lte: now } },
+        ],
       },
-    }),
-    db.match.findMany({
       orderBy: { date: "desc" },
       select: {
         id: true,
@@ -48,21 +54,44 @@ async function History() {
       where: { active: true },
       include: {
         attendances: {
+          where: {
+            match: {
+              OR: [
+                { status: "FINISHED" },
+                { date: { lte: now } },
+              ],
+            },
+          },
           include: { match: true },
           orderBy: { match: { date: "desc" } },
         },
         votesGot: {
+          where: {
+            match: {
+              OR: [
+                { status: "FINISHED" },
+                { date: { lte: now } },
+              ],
+            },
+          },
           include: { match: true },
         },
       },
     }),
     db.vote.findMany({
-      where: { match: { status: "FINISHED" } },
+      where: {
+        match: {
+          OR: [
+            { status: "FINISHED" },
+            { date: { lte: now } },
+          ],
+        },
+      },
       select: { matchId: true, targetId: true, score: true },
     }),
   ]);
 
-  const recentMatches = finishedMatches.length > 0 ? finishedMatches : allMatchesFallback;
+  const recentMatches = finishedMatches;
   const medalsByPlayer = computeMedalsFromVotes(finishedVotes);
 
   const playersData: PlayerHistoryItem[] = players

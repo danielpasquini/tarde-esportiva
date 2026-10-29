@@ -31,10 +31,20 @@ async function Profile({ params }: Props) {
   const { id } = await params;
   const isOrganizer = await isAdmin();
 
+  const now = new Date();
+
   const player = await db.player.findUnique({
     where: { id },
     include: {
       attendances: {
+        where: {
+          match: {
+            OR: [
+              { status: "FINISHED" },
+              { date: { lte: now } },
+            ],
+          },
+        },
         include: {
           match: true,
         },
