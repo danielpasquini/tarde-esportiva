@@ -31,7 +31,7 @@ export function ProfilePublicToggle({
   };
 
   return (
-    <div className="flex items-center gap-3 bg-paper-dark border border-moss/30 p-2.5 rounded">
+    <div className="flex items-center gap-3 bg-paper-dark/65 border border-moss/15 p-3.5 rounded-xl">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           {isPublic ? (
@@ -54,7 +54,7 @@ export function ProfilePublicToggle({
         type="button"
         onClick={handleToggle}
         disabled={loading}
-        className="shrink-0 border-2 border-moss bg-paper hover:bg-paper-dark text-moss px-3 py-1.5 text-xs font-bold uppercase tracking-wider shadow-hard-sm cursor-pointer disabled:opacity-50 transition-colors"
+        className="shrink-0 rounded-lg border border-moss/25 bg-white/85 hover:bg-moss hover:text-paper text-moss px-3 py-1.5 text-xs font-bold uppercase tracking-wider shadow-2xs cursor-pointer disabled:opacity-50 transition-all"
       >
         {loading ? "Salvando…" : isPublic ? "Tornar Privado" : "Tornar Público"}
       </button>

@@ -4,8 +4,8 @@
  * e remoção de duplicatas.
  */
 export function cleanPlayerName(raw: string): string {
-  // Remove números no início, hífens, parênteses ou pontos (ex: "1. ", "02 - ")
-  let s = raw.replace(/^[\s\d.-]+/, "").trim();
+  // Remove números no início, hífens, parênteses ou pontos (ex: "1. ", "02 - ", "3) ")
+  let s = raw.replace(/^[\s\d.\-)]+/, "").trim();
   // Remove marcações extras comuns como "(goleiro)", "(gk)"
   s = s.replace(/\s*\((?:goleiro|gk|g)\)\s*/gi, "").trim();
 

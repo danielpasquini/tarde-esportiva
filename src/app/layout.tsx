@@ -1,21 +1,29 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
-import { DM_Serif_Display, Work_Sans, Figtree } from "next/font/google";
+import { Barlow_Condensed, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import { Star } from "lucide-react";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import GlareHover from "@/components/GlareHover";
+import SplitText from "@/components/SplitText";
+import { MainNav } from "@/components/client";
 
-const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
-
-const dmSerif = DM_Serif_Display({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: "400",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-sans",
+});
+
+const barlowCondensed = Barlow_Condensed({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
   variable: "--font-dm-serif",
 });
 
-const workSans = Work_Sans({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-work-sans",
+  weight: ["500", "700", "800"],
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
@@ -27,68 +35,69 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   colorScheme: "light",
-  themeColor: "#1A2E22",
+  themeColor: "#16281E",
   width: "device-width",
   initialScale: 1,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pt-BR" className={cn(dmSerif.variable, workSans.variable, "font-sans", figtree.variable)}>
+    <html
+      lang="pt-BR"
+      className={cn(barlowCondensed.variable, jakarta.variable, jetbrainsMono.variable, "font-sans")}
+    >
       <body className="antialiased min-h-dvh flex flex-col">
-        {/* Header Elegante & Minimalista */}
-        <header className="px-4 pt-5 pb-1 max-w-md mx-auto w-full">
-          <div className="border-[3px] border-moss bg-paper shadow-hard overflow-hidden">
+        {/* Header Principal */}
+        <header className="px-4 pt-4 pb-1 max-w-md mx-auto w-full">
+          <div className="border border-moss/20 bg-paper rounded-2xl shadow-hard overflow-hidden">
             {/* Top Brand Banner */}
-            <div className="bg-moss px-5 pt-5 pb-4 text-center text-paper relative">
-              <div className="flex items-center justify-center gap-1.5 text-brick/90 mb-1.5" aria-hidden="true">
-                <Star className="size-2.5 fill-current" />
-                <Star className="size-3.5 fill-current" />
-                <Star className="size-2.5 fill-current" />
+            <GlareHover
+              glareColor="#d9a520"
+              glareOpacity={0.14}
+              className="bg-moss fut-header-stripes px-5 pt-5 pb-4 text-center text-paper relative"
+            >
+              {/* Team Color Accent Bar: Azul - Vermelho - Preto - Amarelo */}
+              <div className="absolute inset-x-0 top-0 h-1.5 flex" aria-hidden="true">
+                <span className="flex-1 bg-team-azul" />
+                <span className="flex-1 bg-team-vermelho" />
+                <span className="flex-1 bg-team-preto" />
+                <span className="flex-1 bg-team-amarelo" />
               </div>
 
-              <Link href="/" className="inline-block group focus:outline-none">
-                <h1 className="font-serif text-3xl tracking-wide group-hover:opacity-90 transition-opacity">
-                  TARDE <span className="font-normal text-paper/95">ESPORTIVA</span>
-                </h1>
-              </Link>
+              {/* 3 Estrelas Centralizadas */}
+              <div className="flex items-center justify-center gap-1.5 text-team-amarelo mb-1.5" aria-hidden="true">
+                <Star className="size-2.5 fill-current opacity-80" />
+                <Star className="size-3.5 fill-current drop-shadow-xs" />
+                <Star className="size-2.5 fill-current opacity-80" />
+              </div>
 
-              <div className="mx-auto mt-2.5 h-0.5 w-12 bg-brick rounded-full" aria-hidden="true" />
-            </div>
+              <div>
+                <Link href="/" className="inline-block group focus:outline-none">
+                  <h1 className="font-serif text-3xl sm:text-[34px] font-extrabold uppercase tracking-[0.06em] leading-none group-hover:opacity-90 transition-opacity">
+                    <SplitText
+                      text="TARDE ESPORTIVA"
+                      tag="span"
+                      effect="fade"
+                      duration={0.45}
+                      delay={16}
+                      textAlign="center"
+                    />
+                  </h1>
+                </Link>
+              </div>
+            </GlareHover>
 
-            {/* Navigation Bar integrativa */}
-            <nav className="flex items-stretch border-t-[3px] border-moss bg-paper-dark" aria-label="Navegação Principal">
-              <Link
-                href="/"
-                id="nav-inicio"
-                className="flex-1 text-center py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider text-moss hover:bg-paper transition-colors"
-              >
-                Início
-              </Link>
-              <Link
-                href="/historico"
-                id="nav-historico"
-                className="flex-1 text-center py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider text-moss hover:bg-paper transition-colors border-x-2 border-moss/20"
-              >
-                Histórico
-              </Link>
-              <Link
-                href="/admin"
-                id="nav-admin"
-                className="flex-1 text-center py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider text-moss hover:bg-paper transition-colors"
-              >
-                Organizador
-              </Link>
-            </nav>
+            {/* Segmented Navigation Bar */}
+            <MainNav />
           </div>
         </header>
 
         <main className="mx-auto w-full max-w-md flex-1 px-4 py-5">{children}</main>
 
         <footer className="mx-auto w-full max-w-md px-4 pb-8 pt-4 text-center">
-          <p className="border-t border-moss/20 pt-4 font-serif text-[11px] leading-relaxed text-moss/70 italic">
+          <p className="border-t border-moss/10 pt-4 text-[11px] leading-relaxed text-moss/65 italic">
             &ldquo;Portanto, quer comais, quer bebais ou façais outra coisa qualquer, fazei tudo para a glória de Deus.&rdquo;
-            <span className="block not-italic font-sans text-[10px] uppercase tracking-wider font-semibold text-moss/50 mt-1">
+            <span className="block not-italic font-sans text-[10px] uppercase tracking-wider font-bold text-moss/45 mt-1">
               1 Coríntios 10:31
             </span>
           </p>

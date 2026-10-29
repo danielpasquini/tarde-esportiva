@@ -16,10 +16,18 @@ export function normalizeScore(value: number): number | null {
 }
 
 /**
- * Média ponderada com o histórico: a nota atual pesa (partidas avaliadas + 1),
- * limitado a 10, para que a evolução recente continue tendo efeito.
+ * Média ponderada com o histórico: se o jogador não tinha nota inicial,
+ * a primeira partida define 100% da sua nota base. Caso contrário, a nota atual
+ * pesa (partidas avaliadas + 1), limitado a 10.
  */
-export function nextBaseRating(base: number, ratedMatches: number, matchAverage: number): number {
+export function nextBaseRating(
+  base: number | null | undefined,
+  ratedMatches: number,
+  matchAverage: number
+): number {
+  if (base == null) {
+    return Math.round(matchAverage * 100) / 100;
+  }
   const weight = Math.min(ratedMatches + 1, 10);
   const value = (base * weight + matchAverage) / (weight + 1);
   return Math.round(value * 100) / 100;
@@ -30,8 +38,12 @@ export function nextBaseRating(base: number, ratedMatches: number, matchAverage:
  * base = (prevBase * weight + matchAverage) / (weight + 1)
  * prevBase = (base * (weight + 1) - matchAverage) / weight
  */
-export function revertBaseRating(currentBase: number, currentRatedMatches: number, matchAverage: number): number {
-  if (currentRatedMatches <= 1) return 3.0; // Volta para o valor padrão
+export function revertBaseRating(
+  currentBase: number | null | undefined,
+  currentRatedMatches: number,
+  matchAverage: number
+): number {
+  if (currentRatedMatches <= 1 || currentBase == null) return 3.0;
   const prevMatches = currentRatedMatches - 1;
   const weight = Math.min(prevMatches + 1, 10);
   const prevBase = (currentBase * (weight + 1) - matchAverage) / weight;

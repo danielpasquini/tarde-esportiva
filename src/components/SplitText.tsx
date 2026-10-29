@@ -88,20 +88,20 @@ const getEffect = (effect: SplitTextEffect, em: number): Look => {
 const SplitText = ({
   text,
   className = '',
-  delay = 50,
-  duration = 1.25,
+  delay = 22,
+  duration = 0.55,
   ease,
   splitType = 'chars',
   from,
   to,
-  threshold = 0.1,
-  rootMargin = '-100px',
-  textAlign = 'center',
-  tag = 'p',
+  threshold = 0.05,
+  rootMargin = '0px',
+  textAlign = 'left',
+  tag = 'span',
   staggerFrom = 'start',
   mask = false,
   effect = 'rise',
-  trigger = 'view',
+  trigger = 'load',
   loop = false,
   loopDelay = 1.5,
   hoverEffect = 'none',
@@ -438,7 +438,9 @@ const SplitText = ({
 
   const Tag = tag || 'p';
   const clip =
-    hoverEffect === 'none' && (from !== undefined || to !== undefined || effect === 'rise' || effect === 'fade');
+    Boolean(mask) &&
+    hoverEffect === 'none' &&
+    (from !== undefined || to !== undefined || effect === 'rise' || effect === 'fade');
 
   return (
     <Tag
@@ -448,8 +450,7 @@ const SplitText = ({
       style={{
         textAlign,
         wordWrap: 'break-word',
-        color,
-        visibility: ready ? undefined : 'hidden'
+        color
       }}
     >
       {text}

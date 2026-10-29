@@ -1,6 +1,8 @@
-import { Hand } from "lucide-react";
+import { Hand, Radio } from "lucide-react";
 import type { MedalCounts } from "@/lib/rating";
 import { cn } from "@/lib/utils";
+import ShinyText from "@/components/ShinyText";
+import ScrollVelocity from "@/components/ScrollVelocity";
 
 export const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   OPEN: { label: "Aberta", cls: "stamp-open" },
@@ -11,12 +13,12 @@ export function GloveBadge({ className }: { className?: string; showLabel?: bool
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 bg-amber-500/15 text-amber-900 border border-amber-600/40 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase shrink-0 leading-none select-none align-middle",
+        "inline-flex items-center gap-1 bg-amber-500/15 text-amber-950 border border-amber-700/30 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold tracking-wider uppercase shrink-0 leading-none select-none align-middle",
         className,
       )}
       title="Goleiro"
     >
-      <Hand className="size-3 text-amber-700 shrink-0 fill-amber-500/30" strokeWidth={2.2} aria-hidden="true" />
+      <Hand className="size-3 text-amber-800 shrink-0 fill-amber-500/30" strokeWidth={2.2} aria-hidden="true" />
       <span className="translate-y-[0.5px]">GL</span>
     </span>
   );
@@ -42,21 +44,21 @@ export function PlayerMedals({
       title={`Medalhas: ${medals.gold} ouro, ${medals.silver} prata, ${medals.bronze} bronze`}
     >
       {medals.gold > 0 && (
-        <span className="inline-flex items-center gap-0.5 bg-amber-400/20 text-amber-950 border border-amber-500/40 px-1 py-0.5 rounded">
+        <span className="inline-flex items-center gap-0.5 bg-amber-400/20 text-amber-950 border border-amber-600/35 px-1.5 py-0.5 rounded-sm">
           <span>🥇</span>
-          <span>{medals.gold}</span>
+          <span className="font-mono">{medals.gold}</span>
         </span>
       )}
       {medals.silver > 0 && (
-        <span className="inline-flex items-center gap-0.5 bg-slate-200/80 text-slate-800 border border-slate-400/50 px-1 py-0.5 rounded">
+        <span className="inline-flex items-center gap-0.5 bg-slate-200/80 text-slate-800 border border-slate-400/45 px-1.5 py-0.5 rounded-sm">
           <span>🥈</span>
-          <span>{medals.silver}</span>
+          <span className="font-mono">{medals.silver}</span>
         </span>
       )}
       {medals.bronze > 0 && (
-        <span className="inline-flex items-center gap-0.5 bg-amber-700/15 text-amber-900 border border-amber-700/35 px-1 py-0.5 rounded">
+        <span className="inline-flex items-center gap-0.5 bg-amber-700/12 text-amber-900 border border-amber-700/30 px-1.5 py-0.5 rounded-sm">
           <span>🥉</span>
-          <span>{medals.bronze}</span>
+          <span className="font-mono">{medals.bronze}</span>
         </span>
       )}
     </span>
@@ -64,19 +66,85 @@ export function PlayerMedals({
 }
 
 export function StatusStamp({ status, votingOpen }: { status: string; votingOpen?: boolean }) {
-  if (votingOpen) return <span className="stamp stamp-drawn">Votação aberta</span>;
+  if (votingOpen) {
+    return (
+      <span className="stamp stamp-drawn inline-flex items-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0">
+        <span className="size-1.5 rounded-full bg-team-azul animate-pulse" aria-hidden="true" />
+        <ShinyText
+          text="Votação aberta"
+          color="#2c4a6e"
+          shineColor="#d9a520"
+          speed={2}
+          className="font-extrabold"
+        />
+      </span>
+    );
+  }
   const s = STATUS_LABEL[status] ?? STATUS_LABEL.OPEN;
-  return <span className={`stamp ${s.cls}`}>{s.label}</span>;
+  if (status === "OPEN") {
+    return (
+      <span className={`stamp ${s.cls} inline-flex items-center gap-1.5 whitespace-nowrap shrink-0`}>
+        <span className="size-1.5 rounded-full bg-moss animate-pulse" aria-hidden="true" />
+        <ShinyText
+          text={s.label}
+          color="#16281e"
+          shineColor="#b47a16"
+          speed={2.4}
+          className="font-extrabold"
+        />
+      </span>
+    );
+  }
+  return (
+    <span className={`stamp ${s.cls} whitespace-nowrap shrink-0`}>
+      <span>{s.label}</span>
+    </span>
+  );
+}
+
+export function BroadcastTicker({
+  items = ["TARDE ESPORTIVA", "MATCH DAY HUB", "SÚMULA OFICIAL", "NOTAS PÓS-JOGO", "CLASSIFICAÇÃO GERAL"],
+  className,
+}: {
+  items?: string[];
+  className?: string;
+}) {
+  const line = items.join("  •  ") + "  •  ";
+  return (
+    <div
+      className={cn(
+        "border-y border-moss/15 bg-moss text-paper py-1.5 overflow-hidden select-none",
+        className,
+      )}
+      aria-hidden="true"
+    >
+      <ScrollVelocity
+        texts={[line]}
+        velocity={28}
+        numCopies={4}
+        fontSize="10px"
+        fontWeight={800}
+        scrollerClassName="uppercase tracking-[0.22em] text-paper/90 items-center"
+      />
+    </div>
+  );
 }
 
 export function Loading({ label = "Carregando…" }: { label?: string }) {
   return (
-    <div className="border-[3px] border-moss bg-paper p-4 text-center shadow-hard-sm" role="status">
-      <p className="text-xs font-semibold uppercase tracking-widest text-moss-soft">{label}</p>
+    <div className="border border-moss/15 bg-paper p-6 rounded-xl text-center shadow-hard fut-grid-bg" role="status">
+      <div className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.16em] text-moss">
+        <Radio className="size-3.5 text-brick animate-pulse" />
+        <ShinyText text={label} color="#16281e" shineColor="#b47a16" speed={1.6} />
+      </div>
     </div>
   );
 }
 
 export function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="text-xs font-semibold uppercase tracking-widest text-moss-soft py-4 text-center">{children}</p>;
+  return (
+    <div className="border border-dashed border-moss/20 bg-paper-dark/35 py-7 px-4 rounded-xl text-center">
+      <p className="text-xs font-bold uppercase tracking-widest text-moss-soft">{children}</p>
+    </div>
+  );
 }

@@ -87,16 +87,16 @@ export function VoterSelector({
 
   return (
     <>
-      <ul className="border-[3px] border-moss bg-paper shadow-hard divide-y-2 divide-dashed divide-moss/30">
+      <ul className="border border-moss/15 rounded-2xl bg-paper shadow-hard divide-y divide-moss/10 overflow-hidden">
         {people.map((p) => {
           if (p.hasVoted) {
             return (
-              <li key={p.id} className="opacity-45 bg-paper-dark/60 cursor-not-allowed">
+              <li key={p.id} className="opacity-50 bg-paper-dark/45 cursor-not-allowed">
                 <div className="flex w-full items-center gap-3 px-4 py-3.5 text-left select-none">
                   <span className="flex-1 font-serif text-lg leading-tight line-through text-moss-soft">
                     {p.name}
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-moss-soft bg-paper px-2 py-0.5 border border-moss/20">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-moss-soft bg-white/80 px-2 py-0.5 rounded-md border border-moss/15">
                     ✓ Já Votou
                   </span>
                 </div>
@@ -109,7 +109,7 @@ export function VoterSelector({
               <button
                 type="button"
                 onClick={() => handleSelect(p)}
-                className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-paper-dark group cursor-pointer"
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/80 group cursor-pointer"
                 id={`eu-sou-${p.id}`}
               >
                 <span className="flex-1 font-serif text-lg leading-tight text-moss group-hover:text-brick transition-colors">
@@ -118,7 +118,7 @@ export function VoterSelector({
 
                 {p.hasPin && (
                   <span
-                    className="flex items-center gap-1 text-[10px] font-bold uppercase text-moss-soft bg-moss/10 px-1.5 py-0.5 rounded"
+                    className="flex items-center gap-1 text-[10px] font-bold uppercase text-moss-soft bg-moss/8 px-2 py-0.5 rounded-md"
                     title="Protegido por PIN"
                   >
                     <Lock className="size-3 text-moss" />
@@ -135,22 +135,23 @@ export function VoterSelector({
 
       {/* Modal de PIN */}
       {selectedPerson && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in duration-150">
-          <div className="relative w-full max-w-sm border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="relative w-full max-w-sm border border-moss/20 rounded-2xl bg-paper p-5 shadow-hard flex flex-col gap-4">
             <button
               type="button"
               onClick={() => setSelectedPerson(null)}
-              className="absolute top-3 right-3 text-moss-soft hover:text-brick text-sm p-1"
+              className="absolute top-3.5 right-3.5 text-moss-soft hover:text-brick text-sm p-1 cursor-pointer"
               title="Fechar"
             >
               <X className="size-5" />
             </button>
 
             {selectedPerson.hasPin ? (
-              /* Modal: Jogador já tem PIN -> Digitar PIN para liberar voto */
               <form onSubmit={handleVerifyPin} className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 border-b-2 border-moss/20 pb-2">
-                  <ShieldCheck className="size-5 text-moss shrink-0" />
+                <div className="flex items-center gap-2.5 border-b border-moss/10 pb-2.5">
+                  <div className="size-9 rounded-lg bg-moss/10 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="size-5 text-moss" />
+                  </div>
                   <div>
                     <h3 className="font-serif text-lg leading-tight">Digite seu PIN</h3>
                     <p className="text-xs text-moss-soft">
@@ -174,10 +175,10 @@ export function VoterSelector({
                     onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
                     placeholder="••••"
                     autoFocus
-                    className="border-2 border-moss bg-paper px-3 py-2 text-center font-mono text-2xl tracking-[0.4em] text-moss outline-none"
+                    className="rounded-xl border border-moss/25 focus:border-moss bg-white px-3 py-2 text-center font-mono text-2xl tracking-[0.4em] text-moss outline-none"
                   />
                   {errorMsg && (
-                    <p className="text-xs font-bold text-brick bg-brick/10 p-2 border border-brick/30 rounded">
+                    <p className="text-xs font-bold text-brick bg-brick/10 p-2 rounded-lg border border-brick/30">
                       {errorMsg}
                     </p>
                   )}
@@ -187,14 +188,14 @@ export function VoterSelector({
                   <button
                     type="submit"
                     disabled={loading || pinInput.length !== 4}
-                    className="w-full bg-moss text-paper hover:bg-moss-soft py-2.5 text-xs font-bold uppercase tracking-wider shadow-hard-sm disabled:opacity-50 cursor-pointer"
+                    className="w-full rounded-xl bg-moss text-paper hover:bg-moss-soft py-2.5 text-xs font-bold uppercase tracking-wider shadow-hard-sm disabled:opacity-50 cursor-pointer"
                   >
                     {loading ? "Validando…" : "Confirmar PIN e Votar"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedPerson(null)}
-                    className="w-full bg-paper hover:bg-paper-dark text-moss-soft border border-moss/30 py-1.5 text-xs font-bold uppercase tracking-wider shadow-none cursor-pointer"
+                    className="w-full rounded-xl bg-white/80 hover:bg-white text-moss-soft border border-moss/15 py-2 text-xs font-bold uppercase tracking-wider cursor-pointer"
                   >
                     Voltar
                   </button>
@@ -205,10 +206,11 @@ export function VoterSelector({
                 </p>
               </form>
             ) : (
-              /* Modal: Jogador ainda NÃO tem PIN -> Opcional criar PIN ou continuar sem */
               <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 border-b-2 border-moss/20 pb-2">
-                  <Shield className="size-5 text-brick shrink-0" />
+                <div className="flex items-center gap-2.5 border-b border-moss/10 pb-2.5">
+                  <div className="size-9 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
+                    <Shield className="size-5 text-brick" />
+                  </div>
                   <div>
                     <h3 className="font-serif text-lg leading-tight">Proteger seu Voto com PIN?</h3>
                     <p className="text-xs text-moss-soft">Olá, {selectedPerson.name}!</p>
@@ -235,10 +237,10 @@ export function VoterSelector({
                       onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
                       placeholder="••••"
                       autoFocus
-                      className="border-2 border-moss bg-paper px-3 py-2 text-center font-mono text-2xl tracking-[0.4em] text-moss outline-none"
+                      className="rounded-xl border border-moss/25 focus:border-moss bg-white px-3 py-2 text-center font-mono text-2xl tracking-[0.4em] text-moss outline-none"
                     />
                     {errorMsg && (
-                      <p className="text-xs font-bold text-brick bg-brick/10 p-2 border border-brick/30 rounded">
+                      <p className="text-xs font-bold text-brick bg-brick/10 p-2 rounded-lg border border-brick/30">
                         {errorMsg}
                       </p>
                     )}
@@ -248,7 +250,7 @@ export function VoterSelector({
                     <button
                       type="submit"
                       disabled={loading || pinInput.length !== 4}
-                      className="w-full bg-moss text-paper hover:bg-moss-soft py-2.5 text-xs font-bold uppercase tracking-wider shadow-hard-sm disabled:opacity-50 cursor-pointer"
+                      className="w-full rounded-xl bg-moss text-paper hover:bg-moss-soft py-2.5 text-xs font-bold uppercase tracking-wider shadow-hard-sm disabled:opacity-50 cursor-pointer"
                     >
                       {loading ? "Cadastrando…" : "Cadastrar PIN e Abrir Cédula"}
                     </button>
@@ -256,7 +258,7 @@ export function VoterSelector({
                     <button
                       type="button"
                       onClick={handleSkipPin}
-                      className="w-full bg-paper hover:bg-paper-dark text-moss border border-moss/40 py-2 text-xs font-bold uppercase tracking-wider shadow-none cursor-pointer"
+                      className="w-full rounded-xl bg-white/80 hover:bg-white text-moss border border-moss/20 py-2 text-xs font-bold uppercase tracking-wider cursor-pointer"
                     >
                       Votar sem PIN por enquanto
                     </button>

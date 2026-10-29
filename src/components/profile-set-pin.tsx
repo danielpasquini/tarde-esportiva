@@ -38,17 +38,17 @@ export function ProfileSetPin({ playerId }: { playerId: string }) {
 
   if (!isOpen) {
     return (
-      <div className="bg-paper-dark border-2 border-moss/40 p-3 flex items-center justify-between gap-3">
+      <div className="bg-paper-dark/65 rounded-xl border border-moss/15 p-3.5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Lock className="size-4 text-brick shrink-0" />
-          <span className="text-xs text-moss">
+          <span className="text-xs text-moss font-medium">
             Este perfil ainda não tem PIN cadastrado.
           </span>
         </div>
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="bg-moss text-paper hover:bg-moss-soft px-3 py-1 text-xs font-bold uppercase tracking-wider shadow-hard-sm cursor-pointer shrink-0"
+          className="rounded-lg bg-moss text-paper hover:bg-moss-soft px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider shadow-hard-sm cursor-pointer shrink-0 transition-all"
         >
           Proteger com PIN
         </button>
@@ -57,7 +57,7 @@ export function ProfileSetPin({ playerId }: { playerId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-paper-dark border-2 border-moss p-3.5 flex flex-col gap-2.5">
+    <form onSubmit={handleSubmit} className="bg-paper-dark/75 rounded-xl border border-moss/25 p-4 flex flex-col gap-2.5">
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold uppercase tracking-wider text-moss flex items-center gap-1.5">
           <ShieldCheck className="size-4 text-moss" /> Cadastrar PIN de 4 dígitos
@@ -65,7 +65,7 @@ export function ProfileSetPin({ playerId }: { playerId: string }) {
         <button
           type="button"
           onClick={() => setIsOpen(false)}
-          className="text-xs text-moss-soft hover:text-brick uppercase font-bold"
+          className="text-xs text-moss-soft hover:text-brick uppercase font-bold cursor-pointer"
         >
           Cancelar
         </button>
@@ -83,12 +83,12 @@ export function ProfileSetPin({ playerId }: { playerId: string }) {
           onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
           placeholder="••••"
           autoFocus
-          className="w-28 border-2 border-moss bg-paper px-2 py-1 text-center font-mono text-xl tracking-[0.3em] text-moss outline-none"
+          className="w-28 rounded-lg border border-moss/30 focus:border-moss bg-white px-2 py-1.5 text-center font-mono text-xl tracking-[0.3em] text-moss outline-none"
         />
         <button
           type="submit"
           disabled={loading || pin.length !== 4}
-          className="bg-moss text-paper hover:bg-moss-soft px-3 py-1.5 text-xs font-bold uppercase tracking-wider shadow-hard-sm disabled:opacity-50 cursor-pointer"
+          className="rounded-lg bg-moss text-paper hover:bg-moss-soft px-3.5 py-2 text-xs font-bold uppercase tracking-wider shadow-hard-sm disabled:opacity-50 cursor-pointer"
         >
           {loading ? "Salvando…" : "Salvar PIN"}
         </button>

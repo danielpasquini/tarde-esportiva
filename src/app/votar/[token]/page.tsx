@@ -8,6 +8,9 @@ import { isAdmin } from "@/lib/auth";
 import { VoteForm } from "@/components/vote-form";
 import { VoterSelector } from "@/components/voter-selector";
 import { Loading } from "@/components/ui";
+import SpotlightCard from "@/components/SpotlightCard";
+import SplitText from "@/components/SplitText";
+import ShinyText from "@/components/ShinyText";
 
 async function VoteView({
   params,
@@ -36,16 +39,18 @@ async function VoteView({
 
   if (!match.votingOpen) {
     return (
-      <div className="border-[3px] border-moss bg-paper p-6 text-center shadow-hard">
-        <h2 className="font-serif text-2xl">Votação Fechada</h2>
+      <SpotlightCard className="border border-moss/15 bg-paper p-6 rounded-2xl text-center shadow-hard fut-grid-bg">
+        <h2 className="font-serif text-2xl">
+          <SplitText text="Votação Fechada" tag="span" textAlign="center" />
+        </h2>
         <p className="mt-2 text-xs text-moss-soft">Esta votação não está recebendo notas no momento.</p>
         <Link
           href={`/partida/${match.id}`}
-          className="mt-4 inline-flex items-center border-2 border-moss bg-paper-dark px-4 py-2 text-xs font-bold uppercase tracking-wider shadow-hard-sm"
+          className="mt-4 inline-flex items-center rounded-lg border border-moss/20 bg-paper-dark px-4 py-2 text-xs font-extrabold uppercase tracking-wider shadow-hard-sm"
         >
-          Ver Súmula da Partida
+          Ver Resumo da Partida
         </Link>
-      </div>
+      </SpotlightCard>
     );
   }
 
@@ -72,7 +77,12 @@ async function VoteView({
     return (
       <section className="flex flex-col gap-4">
         <div>
-          <h2 className="font-serif text-3xl leading-tight">Quem é você?</h2>
+          <span className="hud-tag bg-moss text-paper border-transparent mb-1.5">
+            <ShinyText text="PÓS-JOGO • AVALIAÇÃO" color="#f6f4ef" shineColor="#d9a520" speed={2.2} />
+          </span>
+          <h2 className="font-serif text-3xl leading-tight text-moss">
+            <SplitText text="Quem é você?" tag="span" />
+          </h2>
           <p className="mt-1 text-xs text-moss-soft">Selecione seu nome para abrir a cédula de votação.</p>
         </div>
 
@@ -91,19 +101,23 @@ async function VoteView({
 
   if (votedIds.has(voter.id)) {
     return (
-      <div className="border-[3px] border-moss bg-paper p-6 text-center shadow-hard flex flex-col items-center gap-3">
-        <span className="text-3xl">✓</span>
-        <h2 className="font-serif text-2xl">Voto Já Registrado</h2>
+      <SpotlightCard className="border border-moss/15 bg-paper p-6 rounded-2xl text-center shadow-hard flex flex-col items-center gap-3 fut-grid-bg">
+        <span className="inline-flex items-center justify-center size-10 rounded-xl bg-moss text-paper text-xl shadow-hard-brick">
+          ✓
+        </span>
+        <h2 className="font-serif text-2xl">
+          <SplitText text="Voto Já Registrado" tag="span" textAlign="center" />
+        </h2>
         <p className="text-xs text-moss-soft max-w-sm">
           <strong>{voter.name}</strong>, sua avaliação para esta partida já foi registrada e não é possível votar novamente.
         </p>
         <Link
           href={`/votar/${token}`}
-          className="mt-2 inline-flex items-center border-2 border-moss bg-paper-dark px-4 py-2 text-xs font-bold uppercase tracking-wider shadow-hard-sm"
+          className="mt-2 inline-flex items-center rounded-lg border border-moss/20 bg-paper-dark px-4 py-2 text-xs font-extrabold uppercase tracking-wider shadow-hard-sm"
         >
           Voltar à Lista de Jogadores
         </Link>
-      </div>
+      </SpotlightCard>
     );
   }
 
@@ -112,16 +126,16 @@ async function VoteView({
   const targets = people.filter((p) => p.id !== voter.id);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       {/* Barra de identificação do votante */}
-      <div className="flex items-center justify-between border-[3px] border-moss bg-paper-dark px-4 py-2.5 shadow-hard-sm">
+      <div className="flex items-center justify-between border border-moss/15 rounded-xl bg-paper-dark/70 px-4 py-3 shadow-hard-sm">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Votando como</p>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-brick">Votando como</p>
           <p className="truncate font-serif text-lg leading-tight text-moss">{voter.name}</p>
         </div>
         <Link
           href={`/votar/${token}`}
-          className="border-2 border-moss bg-paper px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-paper-dark"
+          className="rounded-lg border border-moss/20 bg-white/85 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] hover:bg-moss hover:text-paper transition-colors"
         >
           Trocar
         </Link>

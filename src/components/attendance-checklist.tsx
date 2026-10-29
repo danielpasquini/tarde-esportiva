@@ -8,7 +8,7 @@ export interface AttendancePlayer {
   id: string;
   name: string;
   isGoalkeeper: boolean;
-  baseRating: number;
+  baseRating: number | null;
 }
 
 export function AttendanceChecklist({
@@ -108,7 +108,9 @@ export function AttendanceChecklist({
               />
               <span className="truncate">{p.name}</span>
               {p.isGoalkeeper && <GloveBadge />}
-              <span className="text-moss-soft ml-auto font-mono text-[11px]">★ {p.baseRating.toFixed(1)}</span>
+              <span className="text-moss-soft ml-auto font-mono text-[11px]">
+                {p.baseRating != null ? `★ ${p.baseRating.toFixed(1).replace(".", ",")}` : "–"}
+              </span>
             </label>
           );
         })}

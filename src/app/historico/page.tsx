@@ -6,8 +6,12 @@ import { db } from "@/lib/db";
 import { isAdmin } from "@/lib/auth";
 import { formatShortDate } from "@/lib/format";
 import { computeMedalsFromVotes } from "@/lib/rating";
-import { Empty, Loading } from "@/components/ui";
+import { Empty, Loading, StatusStamp } from "@/components/ui";
 import { HistoryPlayersList, type PlayerHistoryItem } from "@/components/history-players-list";
+import SpotlightCard from "@/components/SpotlightCard";
+import CountUp from "@/components/CountUp";
+import SplitText from "@/components/SplitText";
+import ShinyText from "@/components/ShinyText";
 
 export const metadata = { title: "Histórico" };
 
@@ -36,6 +40,8 @@ async function History() {
       select: {
         id: true,
         date: true,
+        status: true,
+        location: true,
       },
     }),
     db.player.findMany({
@@ -94,43 +100,80 @@ async function History() {
     .sort((a, b) => b.timesPlayed - a.timesPlayed || a.name.localeCompare(b.name));
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       {/* 1) Card dos Últimos 5 Jogos Jogados */}
       <section className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between border-b-2 border-moss pb-1">
+        <div className="flex items-end justify-between border-b border-moss/15 pb-2">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Histórico Recente</span>
-            <h2 className="font-serif text-2xl">Últimos 5 Jogos</h2>
+            <span className="hud-tag bg-moss text-paper border-transparent mb-1">
+              <ShinyText text="Histórico Recente" color="#f6f4ef" shineColor="#d9a520" speed={2.4} />
+            </span>
+            <h2 className="font-serif text-2xl text-moss leading-none">
+              <SplitText text="Últimos 5 Jogos" tag="span" />
+            </h2>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-moss-soft">
-            {recentMatches.length} {recentMatches.length === 1 ? "partida" : "partidas"}
+          <span className="hud-tag bg-paper-dark text-moss font-mono">
+            <span>
+              <CountUp to={recentMatches.length} duration={1} />{" "}
+              {recentMatches.length === 1 ? "partida" : "partidas"}
+            </span>
           </span>
         </div>
 
         {recentMatches.length ? (
-          <ul className="flex flex-col gap-3">
-            {recentMatches.map((m) => (
-              <li key={m.id}>
-                <Link
-                  href={`/partida/${m.id}`}
-                  className="block border-[3px] border-moss bg-paper shadow-hard hover:bg-paper-dark/30 transition-all active:translate-x-0.5 active:translate-y-0.5 group"
-                  id={`historico-${m.id}`}
-                >
-                  <div className="flex items-center justify-between border-b-2 border-moss bg-paper-dark px-4 py-2.5">
-                    <span className="font-serif text-lg font-bold text-moss">{formatShortDate(m.date)}</span>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-moss group-hover:underline">
-                      Página Pública <ArrowUpRight className="size-3.5 text-moss" />
-                    </span>
-                  </div>
-                  <div className="p-3">
-                    <div className="flex items-center justify-between text-xs text-moss-soft py-1">
-                      <span>{m._count.attendances} jogadores participaram</span>
-                      <span className="text-brick font-bold uppercase text-[10px]">Ver detalhes →</span>
-                    </div>
-                  </div>
-                </Link>
-              </li>
-            ))}
+          <ul className="flex flex-col gap-2.5">
+            {recentMatches.map((m, idx) => {
+              const timeStr = m.date.toLocaleTimeString("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                timeZone: "America/Sao_Paulo",
+              });
+              return (
+                <li key={m.id}>
+                  <SpotlightCard
+                    spotlightColor="rgba(180, 122, 22, 0.14)"
+                    className="border border-moss/15 hover:border-moss/35 bg-paper rounded-xl shadow-hard overflow-hidden transition-all active:scale-[0.99]"
+                  >
+                    <Link
+                      href={`/partida/${m.id}`}
+                      className="block group"
+                      id={`historico-${m.id}`}
+                    >
+                      <div className="flex items-center justify-between border-b border-moss/10 bg-paper-dark/60 px-4 py-2.5 gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="inline-flex items-center justify-center min-w-6 h-5 px-1.5 rounded-sm bg-moss text-paper font-mono text-[10px] font-bold shrink-0">
+                            J{idx + 1}
+                          </span>
+                          <span className="font-serif text-lg font-bold text-moss group-hover:text-brick transition-colors">
+                            {formatShortDate(m.date)}
+                          </span>
+                          <span className="font-mono text-[10px] font-bold text-moss-soft bg-white/80 px-1.5 py-0.5 rounded-sm border border-moss/15">
+                            {timeStr}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <StatusStamp status={m.status} votingOpen={m.votingOpen} />
+                        </div>
+                      </div>
+                      <div className="px-4 py-2.5 fut-grid-bg">
+                        <div className="flex items-center justify-between text-xs text-moss-soft font-semibold gap-2 flex-wrap">
+                          <span className="font-mono text-moss">
+                            <strong>
+                              <CountUp to={m._count.attendances} duration={1} />
+                            </strong>{" "}
+                            jogadores participaram
+                            {m.location && <span className="text-moss-soft"> · 📍 {m.location}</span>}
+                          </span>
+                          <span className="text-brick font-extrabold uppercase tracking-wider text-[10px] inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                            Resumo <ArrowUpRight className="size-3" />
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  </SpotlightCard>
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <Empty>Nenhuma partida encerrada ainda.</Empty>
@@ -138,21 +181,30 @@ async function History() {
       </section>
 
       {/* 2) Card: Jogadores */}
-      <section className="border-[3px] border-moss bg-paper p-5 shadow-hard flex flex-col gap-4">
-        <div className="flex items-center justify-between border-b-2 border-moss pb-2">
+      <SpotlightCard className="border border-moss/15 bg-paper p-4 sm:p-5 rounded-2xl shadow-hard flex flex-col gap-4">
+        <div className="flex items-end justify-between border-b border-moss/15 pb-2.5">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">
-              {isOrganizer ? "Elenco • Modo Organizador" : "Elenco da Tarde"}
+            <span className="hud-tag bg-brick text-paper border-transparent mb-1">
+              <ShinyText
+                text={isOrganizer ? "Elenco • Modo Organizador" : "Elenco da Tarde"}
+                color="#f6f4ef"
+                shineColor="#ffffff"
+                speed={2.2}
+              />
             </span>
-            <h2 className="font-serif text-2xl">Jogadores</h2>
+            <h2 className="font-serif text-2xl text-moss leading-none">
+              <SplitText text="Jogadores" tag="span" />
+            </h2>
           </div>
-          <span className="text-xs font-mono font-bold text-moss-soft">
-            {playersData.length} jogadores
+          <span className="hud-tag bg-paper-dark text-moss font-mono">
+            <span>
+              <CountUp to={playersData.length} duration={1.2} /> jogadores
+            </span>
           </span>
         </div>
 
         {isOrganizer && (
-          <p className="text-xs text-moss-soft bg-paper-dark p-2.5 border border-moss/20">
+          <p className="text-xs text-moss-soft bg-paper-dark/65 p-3 rounded-lg border border-moss/15">
             🔒 <strong>Visão do Organizador:</strong> Você pode visualizar a média geral (estrelas) e as notas de cada partida (decimais). Para os demais usuários, as notas são ocultas.
           </p>
         )}
@@ -160,13 +212,18 @@ async function History() {
         {playersData.length ? (
           <HistoryPlayersList
             players={playersData}
-            allMatches={allMatchesList.map((m) => ({ id: m.id, date: m.date }))}
+            allMatches={allMatchesList.map((m) => ({
+              id: m.id,
+              date: m.date,
+              status: m.status,
+              location: m.location,
+            }))}
             isOrganizer={isOrganizer}
           />
         ) : (
           <Empty>Nenhum jogador cadastrado.</Empty>
         )}
-      </section>
+      </SpotlightCard>
     </div>
   );
 }

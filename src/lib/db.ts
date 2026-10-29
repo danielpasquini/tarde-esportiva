@@ -12,6 +12,11 @@ function createClient(): PrismaClient {
     process.env.DATABASE_URL ??
     "postgresql://postgres:postgres@localhost:5432/tarde_esportiva";
 
+  if (url.startsWith("file:")) {
+    const adapter = new PrismaBetterSqlite3({ url });
+    return new PrismaClient({ adapter });
+  }
+
   const pool = new Pool({ connectionString: url });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
@@ -20,4 +25,3 @@ function createClient(): PrismaClient {
 export const db = globalForPrisma.prisma ?? createClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
-

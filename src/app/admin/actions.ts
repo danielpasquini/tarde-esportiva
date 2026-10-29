@@ -40,7 +40,8 @@ export async function createPlayer(formData: FormData) {
   await requireAdmin();
   const name = str(formData, "name").slice(0, 40);
   if (!name) return;
-  const baseRating = normalizeScore(Number(str(formData, "baseRating"))) ?? 3;
+  const rawRating = str(formData, "baseRating");
+  const baseRating = rawRating ? normalizeScore(Number(rawRating)) : null;
   await db.player.upsert({
     where: { name },
     create: { name, baseRating, isGoalkeeper: formData.get("isGoalkeeper") === "on" },
@@ -56,7 +57,8 @@ export async function importPlayersBatch(formData: FormData) {
   const names = parseNumberedRoster(rawText);
   if (names.length === 0) return;
 
-  const baseRating = normalizeScore(Number(str(formData, "baseRating"))) ?? 3;
+  const rawRating = str(formData, "baseRating");
+  const baseRating = rawRating ? normalizeScore(Number(rawRating)) : null;
 
   for (const name of names) {
     await db.player.upsert({
@@ -74,13 +76,14 @@ export async function importPlayersBatch(formData: FormData) {
 export async function updatePlayer(playerId: string, formData: FormData) {
   await requireAdmin();
   const name = str(formData, "name").slice(0, 40);
-  const baseRating = normalizeScore(Number(str(formData, "baseRating")));
+  const rawRating = str(formData, "baseRating");
+  const baseRating = rawRating ? normalizeScore(Number(rawRating)) : null;
   const clash = name ? await db.player.findFirst({ where: { name, NOT: { id: playerId } } }) : null;
   await db.player.update({
     where: { id: playerId },
     data: {
       ...(name && !clash ? { name } : {}),
-      ...(baseRating != null ? { baseRating } : {}),
+      baseRating: rawRating ? baseRating : null,
       isGoalkeeper: formData.get("isGoalkeeper") === "on",
       active: formData.get("active") === "on",
     },
@@ -219,7 +222,7 @@ export async function addAttendancesByText(matchId: string, formData: FormData) 
     let player = await db.player.findUnique({ where: { name } });
     if (!player) {
       player = await db.player.create({
-        data: { name, baseRating: 3.0, active: true },
+        data: { name, baseRating: null, active: true },
       });
     } else if (!player.active) {
       player = await db.player.update({

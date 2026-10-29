@@ -5,13 +5,14 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: var(--font-sans);
-  --font-serif: var(--font-dm-serif), ui-serif, Georgia, serif;
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-dm-serif), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
 
-  --color-paper: #f4f1ea;
-  --color-paper-dark: #e7e1d3;
-  --color-moss: #1a2e22;
-  --color-moss-soft: #3b5244;
+  --color-paper: #f6f4ef;
+  --color-paper-dark: #eae4d7;
+  --color-moss: #16281e;
+  --color-moss-soft: #435a4c;
   --color-brick: #b47a16;
 
   --color-team-azul: #2c4a6e;
@@ -19,15 +20,15 @@
   --color-team-preto: #1f1f1f;
   --color-team-amarelo: #d9a520;
 
-  --shadow-hard: 4px 4px 0 0 #1a2e22;
-  --shadow-hard-sm: 2px 2px 0 0 #1a2e22;
-  --shadow-hard-brick: 4px 4px 0 0 #b47a16;
-  --shadow-hard-gold: 4px 4px 0 0 #d9a520;
+  --shadow-hard: 0 1px 3px rgba(22, 40, 30, 0.06), 0 10px 28px -6px rgba(22, 40, 30, 0.10);
+  --shadow-hard-sm: 0 1px 2px rgba(22, 40, 30, 0.05), 0 4px 12px -2px rgba(22, 40, 30, 0.07);
+  --shadow-hard-brick: 0 2px 6px rgba(180, 122, 22, 0.14), 0 8px 20px -4px rgba(22, 40, 30, 0.12);
+  --shadow-hard-gold: 0 4px 20px -4px rgba(217, 165, 32, 0.22), 0 1px 3px rgba(180, 122, 22, 0.12);
 
-  --color-border: #1a2e22;
-  --color-background: #f4f1ea;
-  --color-foreground: #1a2e22;
-  --font-heading: var(--font-sans);
+  --color-border: #16281e;
+  --color-background: #f6f4ef;
+  --color-foreground: #16281e;
+  --font-heading: var(--font-dm-serif);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -67,10 +68,10 @@
 
 :root {
   color-scheme: light;
-  --paper: #f4f1ea;
-  --paper-dark: #e7e1d3;
-  --moss: #1a2e22;
-  --moss-soft: #3b5244;
+  --paper: #f6f4ef;
+  --paper-dark: #eae4d7;
+  --moss: #16281e;
+  --moss-soft: #435a4c;
   --brick: #b47a16;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -103,7 +104,7 @@
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
 * {
@@ -116,24 +117,44 @@ input, select, textarea {
 }
 
 body {
-  background-color: var(--background);
+  background-color: #f2efe8;
   font-family: var(--font-sans);
-  background-image: radial-gradient(rgba(26, 46, 34, 0.07) 1px, transparent 1px);
-  background-size: 14px 14px;
+  background-image:
+    radial-gradient(120% 480px at 50% 0%, rgba(22, 40, 30, 0.06) 0%, transparent 100%);
+  background-attachment: fixed;
 }
 
-/* Hard-shadow utility helpers */
+/* EA Sports FC Display Typography for .font-serif */
+.font-serif {
+  font-family: var(--font-dm-serif), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* State-of-the-art soft elevation shadows */
 .shadow-hard {
-  box-shadow: 4px 4px 0 0 #1a2e22;
+  box-shadow:
+    0 1px 2px rgba(22, 40, 30, 0.05),
+    0 10px 28px -6px rgba(22, 40, 30, 0.09);
 }
 .shadow-hard-sm {
-  box-shadow: 2px 2px 0 0 #1a2e22;
+  box-shadow:
+    0 1px 2px rgba(22, 40, 30, 0.04),
+    0 4px 12px -2px rgba(22, 40, 30, 0.06);
 }
 .shadow-hard-brick {
-  box-shadow: 4px 4px 0 0 #b47a16;
+  box-shadow:
+    0 2px 6px rgba(180, 122, 22, 0.14),
+    0 8px 20px -4px rgba(22, 40, 30, 0.12);
+}
+.shadow-hard-gold {
+  box-shadow:
+    0 6px 22px -4px rgba(217, 165, 32, 0.22),
+    0 1px 3px rgba(180, 122, 22, 0.12);
 }
 
-/* Stamp styles */
+/* Stamp styles (modern status pills) */
 .stamp {
   display: inline-flex;
   align-items: center;
@@ -141,26 +162,26 @@ body {
   font-family: var(--font-sans);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.65rem;
-  padding: 0.25rem 0.55rem;
-  border: 1.5px solid currentColor;
-  border-radius: 4px;
+  letter-spacing: 0.07em;
+  font-size: 0.64rem;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid currentColor;
+  border-radius: 6px;
 }
 .stamp-open {
-  color: #1a2e22;
-  border-color: #1a2e22;
-  background: #e7e1d3;
+  color: #16281e;
+  border-color: rgba(22, 40, 30, 0.22);
+  background: rgba(22, 40, 30, 0.07);
 }
 .stamp-drawn {
   color: #2c4a6e;
-  border-color: #2c4a6e;
-  background: #f4f1ea;
+  border-color: rgba(44, 74, 110, 0.3);
+  background: rgba(44, 74, 110, 0.08);
 }
 .stamp-done {
-  color: #b47a16;
-  border-color: #b47a16;
-  background: #f4f1ea;
+  color: #9a650c;
+  border-color: rgba(180, 122, 22, 0.32);
+  background: rgba(180, 122, 22, 0.1);
 }
 
 details > summary {
@@ -215,4 +236,32 @@ details > summary::-webkit-details-marker {
   html {
     @apply font-sans;
   }
+}
+
+/* Modern rectangular section tags & surfaces */
+.hud-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.625rem;
+  padding: 0.22rem 0.6rem;
+  border: 1px solid rgba(22, 40, 30, 0.14);
+  border-radius: 5px;
+}
+
+.fut-grid-bg {
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(234, 228, 215, 0.25) 100%
+  );
+}
+
+.fut-header-stripes {
+  background-image:
+    radial-gradient(110% 90% at 50% 0%, rgba(217, 165, 32, 0.22) 0%, rgba(22, 40, 30, 0) 70%),
+    linear-gradient(180deg, #1d3427 0%, #14241b 100%);
 }

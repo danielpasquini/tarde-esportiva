@@ -41,13 +41,13 @@ export function ProfilePinGate({
   };
 
   return (
-    <div className="max-w-md mx-auto border-[3px] border-moss bg-paper p-6 shadow-hard flex flex-col gap-4">
-      <div className="flex items-center gap-3 border-b-2 border-moss/20 pb-3">
-        <div className="size-10 rounded-full bg-moss/10 flex items-center justify-center shrink-0">
+    <div className="max-w-md mx-auto border border-moss/15 rounded-2xl bg-paper p-6 shadow-hard flex flex-col gap-4">
+      <div className="flex items-center gap-3 border-b border-moss/10 pb-3">
+        <div className="size-10 rounded-xl bg-moss/10 flex items-center justify-center shrink-0">
           <Lock className="size-5 text-moss" />
         </div>
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-brick">
             Perfil Privado
           </span>
           <h2 className="font-serif text-2xl leading-tight">{playerName}</h2>
@@ -74,10 +74,10 @@ export function ProfilePinGate({
             onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
             placeholder="••••"
             autoFocus
-            className="border-2 border-moss bg-paper px-3 py-2.5 text-center font-mono text-3xl tracking-[0.4em] text-moss outline-none"
+            className="rounded-xl border border-moss/25 focus:border-moss bg-white px-3 py-2.5 text-center font-mono text-3xl tracking-[0.4em] text-moss outline-none"
           />
           {errorMsg && (
-            <p className="text-xs font-bold text-brick bg-brick/10 p-2 border border-brick/30 rounded">
+            <p className="text-xs font-bold text-brick bg-brick/10 p-2.5 border border-brick/30 rounded-lg">
               {errorMsg}
             </p>
           )}
@@ -86,14 +86,14 @@ export function ProfilePinGate({
         <button
           type="submit"
           disabled={loading || pin.length !== 4}
-          className="w-full bg-moss text-paper hover:bg-moss-soft py-3 text-xs font-bold uppercase tracking-wider shadow-hard-sm disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-1"
+          className="w-full rounded-xl bg-moss text-paper hover:bg-moss-soft py-3 text-xs font-bold uppercase tracking-wider shadow-hard-sm disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-1 transition-all"
         >
           <ShieldCheck className="size-4" />
           {loading ? "Validando…" : "Desbloquear Perfil"}
         </button>
       </form>
 
-      <div className="border-t border-moss/20 pt-3 text-center">
+      <div className="border-t border-moss/10 pt-3 text-center">
         <p className="text-[11px] text-moss-soft">
           Esqueceu seu PIN ou cadastraram por engano?
         </p>

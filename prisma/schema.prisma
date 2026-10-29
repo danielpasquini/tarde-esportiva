@@ -11,7 +11,7 @@ model Player {
   id           String       @id @default(cuid())
   name         String       @unique
   isGoalkeeper Boolean      @default(false)
-  baseRating   Float        @default(3)
+  baseRating   Float?
   ratedMatches Int          @default(0)
   active       Boolean      @default(true)
   pin          String?

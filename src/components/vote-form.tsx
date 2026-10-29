@@ -4,24 +4,32 @@ import { useState, useTransition } from "react";
 import { submitVotes } from "@/app/actions";
 import { StarRating } from "@/components/star-rating";
 import { GloveBadge } from "@/components/ui";
+import SpotlightCard from "@/components/SpotlightCard";
+import ShinyText from "@/components/ShinyText";
 
 export type Person = { id: string; name: string; isGoalkeeper?: boolean };
 
 function VoteRow({ p, value, onChange }: { p: Person; value: number; onChange: (v: number) => void }) {
   return (
-    <li className="p-3 border-b-2 border-moss/20 last:border-b-0 flex flex-col gap-2 bg-paper">
+    <li className="p-3.5 border-b border-moss/10 last:border-b-0 flex flex-col gap-2 bg-white/65 hover:bg-white transition-colors">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="font-semibold text-sm truncate">{p.name}</span>
+          <span className="font-bold text-sm truncate text-moss">{p.name}</span>
           {p.isGoalkeeper && <GloveBadge />}
         </div>
-        <span className="font-serif text-lg font-bold text-moss tabular-nums">
-          {value ? value.toFixed(1).replace(".", ",") : "–"}
+        <span
+          className={`inline-flex items-center justify-center min-w-11 px-2.5 py-0.5 rounded-md font-mono text-sm font-extrabold tabular-nums border ${
+            value > 0
+              ? "bg-moss text-paper border-moss"
+              : "bg-paper-dark/80 text-moss-soft border-moss/15"
+          }`}
+        >
+          {value ? `★ ${value.toFixed(1).replace(".", ",")}` : "–"}
         </span>
       </div>
 
-      <div className="flex items-center justify-between border-t border-dashed border-moss/30 pt-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-moss-soft">Nota</span>
+      <div className="flex items-center justify-between border-t border-dashed border-moss/15 pt-2">
+        <span className="text-[10px] font-extrabold uppercase tracking-wider text-moss-soft">Nota</span>
         <StarRating value={value} onChange={onChange} label={p.name} />
       </div>
     </li>
@@ -60,19 +68,21 @@ export function VoteForm({
     });
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="border-[3px] border-moss bg-paper shadow-hard">
-        <div className="flex items-center justify-between border-b-[3px] border-moss px-4 py-3 bg-paper-dark">
+    <div className="flex flex-col gap-5">
+      <SpotlightCard className="border border-moss/15 bg-paper rounded-2xl shadow-hard overflow-hidden">
+        <div className="flex items-center justify-between border-b border-moss/10 px-4 py-3.5 bg-paper-dark/65">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brick">Cédula de Votação</span>
-            <h2 className="font-serif text-2xl leading-none">Avaliar Jogadores</h2>
+            <span className="hud-tag bg-moss text-paper border-transparent mb-1">
+              <ShinyText text="Cédula de Votação" color="#f6f4ef" shineColor="#d9a520" speed={2.2} />
+            </span>
+            <h2 className="font-serif text-2xl leading-none text-moss">Avaliar Jogadores</h2>
           </div>
-          <span className="border-2 border-moss bg-paper px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-moss">
+          <span className="rounded-md border border-moss/20 bg-white/85 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-moss">
             {voter.name}
           </span>
         </div>
 
-        <p className="px-4 py-2 text-[11px] text-moss-soft bg-paper-dark/50 border-b border-moss/20">
+        <p className="px-4 py-2 text-[11px] text-moss-soft bg-paper-dark/35 border-b border-moss/10">
           Dê uma nota de 1 a 5 estrelas para quem você quiser (não é obrigatório avaliar todos).
         </p>
 
@@ -85,15 +95,15 @@ export function VoteForm({
         ) : (
           <p className="p-4 text-xs text-moss-soft">Nenhum jogador para avaliar.</p>
         )}
-      </section>
+      </SpotlightCard>
 
       {message && (
         <div
           role="status"
-          className={`border-2 p-3 text-xs font-semibold ${
+          className={`rounded-xl border p-3.5 text-xs font-semibold ${
             message.ok
-              ? "border-moss bg-[#E3EADF] text-moss"
-              : "border-brick bg-[#F9EED9] text-brick"
+              ? "border-moss/30 bg-[#E3EADF] text-moss"
+              : "border-brick/40 bg-[#F9EED9] text-brick"
           }`}
         >
           {message.text}
@@ -101,13 +111,13 @@ export function VoteForm({
       )}
 
       {/* Barra de envio fixa inferior */}
-      <div className="sticky bottom-4">
+      <div className="sticky bottom-4 z-10">
         <button
           id="enviar-votos"
           type="button"
           disabled={pending || rated === 0}
           onClick={send}
-          className="w-full border-[3px] border-moss bg-moss text-paper py-3.5 px-4 text-xs font-bold uppercase tracking-widest shadow-hard-brick transition-transform active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-xl bg-moss hover:bg-moss-soft text-paper py-3.5 px-4 text-xs font-extrabold uppercase tracking-widest shadow-hard-brick transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {pending ? "Enviando votos…" : `Confirmar e Enviar (${rated} notas)`}
         </button>
