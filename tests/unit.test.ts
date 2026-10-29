@@ -36,10 +36,11 @@ describe("Unit Tests — Rating & Medals (src/lib/rating.ts)", () => {
   });
 
   it("reverts baseRating back to previous rating", () => {
+    // If ratedMatches was 1, reverting clears baseRating to null (no rating yet)
+    assert.equal(revertBaseRating(4.4, 1, 4.4), null);
+
     const initial = 3.0;
     const after1 = nextBaseRating(initial, 0, 4.4);
-    assert.equal(revertBaseRating(after1, 1, 4.4), 3.0);
-
     const after2 = nextBaseRating(after1, 1, 3.8);
     assert.equal(revertBaseRating(after2, 2, 3.8), after1);
   });

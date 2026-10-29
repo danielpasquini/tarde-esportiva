@@ -66,7 +66,7 @@ async function main() {
     .split(/[\r\n]+/);
 
   const seen = new Set<string>();
-  const officialPlayers: { name: string; isGoalkeeper: boolean; baseRating: number }[] = [];
+  const officialPlayers: { name: string; isGoalkeeper: boolean; baseRating: number | null }[] = [];
 
   for (const line of rawLines) {
     const clean = line.replace(/^[\s\d.-]+/, "").trim();
@@ -76,7 +76,7 @@ async function main() {
     const key = formatted.toLowerCase();
     if (!seen.has(key)) {
       seen.add(key);
-      officialPlayers.push({ name: formatted, isGoalkeeper: false, baseRating: 3.5 });
+      officialPlayers.push({ name: formatted, isGoalkeeper: false, baseRating: null });
     }
   }
 

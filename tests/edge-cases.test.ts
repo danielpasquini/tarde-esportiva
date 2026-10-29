@@ -35,9 +35,9 @@ describe("Edge Case Tests — Score Normalization & Rating Math", () => {
   });
 
   it("clamps revertBaseRating within [MIN_SCORE, MAX_SCORE] and handles <= 1 ratedMatches", () => {
-    assert.equal(revertBaseRating(4.8, 1, 4.8), 3.0);
-    assert.equal(revertBaseRating(4.8, 0, 4.8), 3.0);
-    assert.equal(revertBaseRating(4.8, -2, 4.8), 3.0);
+    assert.equal(revertBaseRating(4.8, 1, 4.8), null);
+    assert.equal(revertBaseRating(4.8, 0, 4.8), null);
+    assert.equal(revertBaseRating(4.8, -2, 4.8), null);
 
     // Extreme low revert clamped to MIN_SCORE (1.0)
     const low = revertBaseRating(1.0, 3, 5.0);

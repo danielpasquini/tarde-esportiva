@@ -37,13 +37,16 @@ export function nextBaseRating(
  * Reverte a aplicação de uma média de partida sobre a nota do jogador.
  * base = (prevBase * weight + matchAverage) / (weight + 1)
  * prevBase = (base * (weight + 1) - matchAverage) / weight
+ *
+ * Se o jogador possuía apenas 1 partida avaliada (ou nenhuma), reverter a partida
+ * retorna null (sem nota acumulada).
  */
 export function revertBaseRating(
   currentBase: number | null | undefined,
   currentRatedMatches: number,
   matchAverage: number
-): number {
-  if (currentRatedMatches <= 1 || currentBase == null) return 3.0;
+): number | null {
+  if (currentRatedMatches <= 1 || currentBase == null) return null;
   const prevMatches = currentRatedMatches - 1;
   const weight = Math.min(prevMatches + 1, 10);
   const prevBase = (currentBase * (weight + 1) - matchAverage) / weight;
