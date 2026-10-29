@@ -2,10 +2,12 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
-import { ArrowLeft, ArrowRight, Radio, Trophy, User, Vote } from "lucide-react";
+import { ArrowLeft, ArrowRight, Radio, Trash2, Trophy, User, Vote } from "lucide-react";
 import { db } from "@/lib/db";
 import { isAdmin } from "@/lib/auth";
 import { formatMatchDate } from "@/lib/format";
+import { deleteMatch } from "@/app/admin/actions";
+import { SubmitButton } from "@/components/client";
 import { GloveBadge, Loading, StatusStamp, TeamColorBadge } from "@/components/ui";
 import SpotlightCard from "@/components/SpotlightCard";
 import GlareHover from "@/components/GlareHover";
@@ -327,6 +329,27 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
           <p className="text-xs text-moss-soft italic">Nenhum jogador registrado nesta partida.</p>
         )}
       </SpotlightCard>
+
+      {/* Exclusão da Partida (Exibido para o Organizador) */}
+      {isOrganizer && (
+        <section className="border border-brick/30 rounded-2xl bg-paper p-4 flex items-center justify-between gap-4">
+          <div>
+            <span className="font-serif text-base text-brick block">Excluir Partida</span>
+            <span className="text-[11px] text-moss-soft">
+              Apaga permanentemente a partida e seus votos, revertendo os pontos no histórico dos jogadores.
+            </span>
+          </div>
+          <form action={deleteMatch.bind(null, match.id)}>
+            <SubmitButton
+              className="inline-flex items-center gap-2 bg-brick text-paper hover:bg-brick/90 py-2.5 px-3.5 text-xs font-extrabold uppercase tracking-wider shadow-none shrink-0 border-transparent cursor-pointer"
+              confirm="Tem certeza que deseja apagar permanentemente esta partida?"
+            >
+              <Trash2 className="size-4 shrink-0" strokeWidth={2.2} />
+              <span>Excluir Partida</span>
+            </SubmitButton>
+          </form>
+        </section>
+      )}
     </div>
   );
 }

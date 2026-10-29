@@ -165,67 +165,65 @@ async function MatchVotingAdminView({ params }: { params: Promise<{ id: string }
         )}
 
         {list.length ? (
-          <div className="border border-moss/15 rounded-xl overflow-hidden bg-white/75">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-moss text-paper uppercase tracking-wider text-[10px]">
-                  <tr>
-                    <th className="py-2.5 px-2 w-8 text-center font-extrabold">#</th>
-                    <th className="py-2.5 px-2 font-extrabold">Jogador</th>
-                    <th className="py-2.5 px-2 text-center font-extrabold">Votos</th>
-                    <th className="py-2.5 px-2 text-right font-extrabold">Média</th>
-                    <th className="py-2.5 px-2 text-right font-extrabold">Base</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-moss/10 text-xs">
-                  {list.map((p) => (
-                    <tr
-                      key={p.id}
-                      className={
-                        p.rank <= 5 && p.avg > 0 ? "bg-amber-500/8 font-semibold" : "hover:bg-paper-dark/40"
-                      }
-                    >
-                      <td className="py-2.5 px-2 tabular-nums text-moss-soft text-center font-mono">
-                        {p.avg > 0 ? `${p.rank}º` : "–"}
-                      </td>
-                      <td className="py-2.5 px-2 min-w-0 max-w-[160px]">
-                        <div className="flex items-center gap-1 min-w-0">
-                          {p.avg > 0 && p.rank === 1 && <span className="text-xs leading-none shrink-0">🥇</span>}
-                          {p.avg > 0 && p.rank === 2 && <span className="text-xs leading-none shrink-0">🥈</span>}
-                          {p.avg > 0 && p.rank === 3 && <span className="text-xs leading-none shrink-0">🥉</span>}
-                          <TeamColorBadge team={p.team} />
-                          <Link
-                            href={`/perfil/${p.id}`}
-                            className="truncate font-bold text-moss hover:text-brick hover:underline"
-                          >
-                            {p.name}
-                          </Link>
-                          {p.isGoalkeeper && <GloveBadge />}
-                          {p.rank === 1 && p.avg > 0 && (
-                            <span className="text-[9px] rounded-xs bg-moss text-paper font-extrabold px-1.5 py-0.5 shrink-0">
-                              CRAQUE
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-2 text-center tabular-nums font-mono">{p.count}</td>
-                      <td className="py-2.5 px-2 text-right font-mono font-extrabold text-moss whitespace-nowrap">
-                        {p.avg > 0 ? (
-                          <span className="inline-flex items-center rounded-sm border border-moss/20 bg-paper-dark/75 px-1.5 py-0.5">
-                            ★ {p.avg.toFixed(1).replace(".", ",")}
+          <div className="border border-moss/15 rounded-xl bg-white/75 overflow-hidden">
+            <table className="w-full text-left text-xs table-fixed">
+              <thead className="bg-moss text-paper uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="py-2.5 px-1.5 w-7 text-center font-extrabold">#</th>
+                  <th className="py-2.5 px-2 font-extrabold">Jogador</th>
+                  <th className="py-2.5 px-1.5 w-12 text-center font-extrabold">Votos</th>
+                  <th className="py-2.5 px-1.5 w-16 text-right font-extrabold">Média</th>
+                  <th className="py-2.5 px-1.5 w-14 text-right font-extrabold">Base</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-moss/10 text-xs">
+                {list.map((p) => (
+                  <tr
+                    key={p.id}
+                    className={
+                      p.rank <= 5 && p.avg > 0 ? "bg-amber-500/8 font-semibold" : "hover:bg-paper-dark/40"
+                    }
+                  >
+                    <td className="py-2 px-1.5 tabular-nums text-moss-soft text-center font-mono">
+                      {p.avg > 0 ? `${p.rank}º` : "–"}
+                    </td>
+                    <td className="py-2 px-2 min-w-0">
+                      <div className="flex items-center gap-1 min-w-0">
+                        {p.avg > 0 && p.rank === 1 && <span className="text-xs leading-none shrink-0">🥇</span>}
+                        {p.avg > 0 && p.rank === 2 && <span className="text-xs leading-none shrink-0">🥈</span>}
+                        {p.avg > 0 && p.rank === 3 && <span className="text-xs leading-none shrink-0">🥉</span>}
+                        <TeamColorBadge team={p.team} />
+                        <Link
+                          href={`/perfil/${p.id}`}
+                          className="truncate font-bold text-moss hover:text-brick hover:underline"
+                        >
+                          {p.name}
+                        </Link>
+                        {p.isGoalkeeper && <GloveBadge />}
+                        {p.rank === 1 && p.avg > 0 && (
+                          <span className="text-[9px] rounded-xs bg-moss text-paper font-extrabold px-1 py-0.2 shrink-0 hidden sm:inline">
+                            CRAQUE
                           </span>
-                        ) : (
-                          "–"
                         )}
-                      </td>
-                      <td className="py-2.5 px-2 text-right font-mono text-moss-soft whitespace-nowrap">
-                        {p.baseRating != null ? `★ ${p.baseRating.toFixed(1).replace(".", ",")}` : "–"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </td>
+                    <td className="py-2 px-1.5 text-center tabular-nums font-mono">{p.count}</td>
+                    <td className="py-2 px-1.5 text-right font-mono font-extrabold text-moss whitespace-nowrap">
+                      {p.avg > 0 ? (
+                        <span className="inline-flex items-center rounded-sm border border-moss/20 bg-paper-dark/75 px-1 py-0.5 text-[11px]">
+                          ★ {p.avg.toFixed(1).replace(".", ",")}
+                        </span>
+                      ) : (
+                        "–"
+                      )}
+                    </td>
+                    <td className="py-2 px-1.5 text-right font-mono text-moss-soft whitespace-nowrap text-[11px]">
+                      {p.baseRating != null ? `★ ${p.baseRating.toFixed(1).replace(".", ",")}` : "–"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : (
           <p className="text-xs text-moss-soft">Nenhum jogador confirmado para esta partida.</p>

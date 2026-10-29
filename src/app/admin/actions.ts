@@ -198,7 +198,7 @@ export async function addAttendances(matchId: string, formData: FormData) {
   await requireAdmin();
   const ids = formData.getAll("playerId").map(String);
   const match = await db.match.findUnique({ where: { id: matchId } });
-  if (!match || match.status === "FINISHED" || ids.length === 0) return;
+  if (!match || ids.length === 0) return;
   const players = await db.player.findMany({ where: { id: { in: ids }, active: true } });
   for (const p of players) {
     await db.attendance.upsert({
@@ -216,7 +216,7 @@ export async function addAttendancesByText(matchId: string, formData: FormData) 
   const rawText = str(formData, "names");
   const names = parseNumberedRoster(rawText);
   const match = await db.match.findUnique({ where: { id: matchId } });
-  if (!match || match.status === "FINISHED" || names.length === 0) return;
+  if (!match || names.length === 0) return;
 
   for (const name of names) {
     let player = await db.player.findUnique({ where: { name } });

@@ -68,62 +68,60 @@ async function AdminVotesTable({ matchId }: { matchId: string }) {
   }
 
   return (
-    <div className="border border-moss/15 rounded-xl overflow-hidden bg-white/75">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-moss text-paper uppercase tracking-wider text-[10px]">
-            <tr>
-              <th className="py-2.5 px-2 w-8 text-center font-extrabold">#</th>
-              <th className="py-2.5 px-2 font-extrabold">Jogador</th>
-              <th className="py-2.5 px-2 text-center font-extrabold">Votos</th>
-              <th className="py-2.5 px-2 text-right font-extrabold">Média</th>
-              <th className="py-2.5 px-2 text-right font-extrabold">Base</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-moss/10 text-xs">
-            {list.map((p) => (
-              <tr key={p.id} className={p.rank <= 5 && p.avg > 0 ? "bg-amber-500/8 font-semibold" : "hover:bg-paper-dark/40"}>
-                <td className="py-2.5 px-2 tabular-nums text-moss-soft text-center font-mono">
-                  {p.avg > 0 ? `${p.rank}º` : "–"}
-                </td>
-                <td className="py-2.5 px-2 min-w-0 max-w-[160px]">
-                  <div className="flex items-center gap-1 min-w-0">
-                    {p.avg > 0 && p.rank === 1 && <span className="text-xs leading-none shrink-0">🥇</span>}
-                    {p.avg > 0 && p.rank === 2 && <span className="text-xs leading-none shrink-0">🥈</span>}
-                    {p.avg > 0 && p.rank === 3 && <span className="text-xs leading-none shrink-0">🥉</span>}
-                    <TeamColorBadge team={p.team} />
-                    <Link
-                      href={`/perfil/${p.id}`}
-                      className="truncate font-bold text-moss hover:text-brick hover:underline"
-                    >
-                      {p.name}
-                    </Link>
-                    {p.isGoalkeeper && <GloveBadge />}
-                    {p.rank === 1 && p.avg > 0 && (
-                      <span className="text-[9px] rounded-xs bg-moss text-paper font-extrabold px-1.5 py-0.5 shrink-0">
-                        CRAQUE
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="py-2.5 px-2 text-center tabular-nums font-mono">{p.count}</td>
-                <td className="py-2.5 px-2 text-right font-mono font-extrabold text-moss whitespace-nowrap">
-                  {p.avg > 0 ? (
-                    <span className="inline-flex items-center rounded-sm border border-moss/20 bg-paper-dark/75 px-1.5 py-0.5">
-                      ★ {p.avg.toFixed(1).replace(".", ",")}
+    <div className="border border-moss/15 rounded-xl bg-white/75 overflow-hidden">
+      <table className="w-full text-left text-xs table-fixed">
+        <thead className="bg-moss text-paper uppercase tracking-wider text-[10px]">
+          <tr>
+            <th className="py-2.5 px-1.5 w-7 text-center font-extrabold">#</th>
+            <th className="py-2.5 px-2 font-extrabold">Jogador</th>
+            <th className="py-2.5 px-1.5 w-12 text-center font-extrabold">Votos</th>
+            <th className="py-2.5 px-1.5 w-16 text-right font-extrabold">Média</th>
+            <th className="py-2.5 px-1.5 w-14 text-right font-extrabold">Base</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-moss/10 text-xs">
+          {list.map((p) => (
+            <tr key={p.id} className={p.rank <= 5 && p.avg > 0 ? "bg-amber-500/8 font-semibold" : "hover:bg-paper-dark/40"}>
+              <td className="py-2 px-1.5 tabular-nums text-moss-soft text-center font-mono">
+                {p.avg > 0 ? `${p.rank}º` : "–"}
+              </td>
+              <td className="py-2 px-2 min-w-0">
+                <div className="flex items-center gap-1 min-w-0">
+                  {p.avg > 0 && p.rank === 1 && <span className="text-xs leading-none shrink-0">🥇</span>}
+                  {p.avg > 0 && p.rank === 2 && <span className="text-xs leading-none shrink-0">🥈</span>}
+                  {p.avg > 0 && p.rank === 3 && <span className="text-xs leading-none shrink-0">🥉</span>}
+                  <TeamColorBadge team={p.team} />
+                  <Link
+                    href={`/perfil/${p.id}`}
+                    className="truncate font-bold text-moss hover:text-brick hover:underline"
+                  >
+                    {p.name}
+                  </Link>
+                  {p.isGoalkeeper && <GloveBadge />}
+                  {p.rank === 1 && p.avg > 0 && (
+                    <span className="text-[9px] rounded-xs bg-moss text-paper font-extrabold px-1 py-0.2 shrink-0 hidden sm:inline">
+                      CRAQUE
                     </span>
-                  ) : (
-                    "–"
                   )}
-                </td>
-                <td className="py-2.5 px-2 text-right font-mono text-moss-soft whitespace-nowrap">
-                  {p.baseRating != null ? `★ ${p.baseRating.toFixed(1).replace(".", ",")}` : "–"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </div>
+              </td>
+              <td className="py-2 px-1.5 text-center tabular-nums font-mono">{p.count}</td>
+              <td className="py-2 px-1.5 text-right font-mono font-extrabold text-moss whitespace-nowrap">
+                {p.avg > 0 ? (
+                  <span className="inline-flex items-center rounded-sm border border-moss/20 bg-paper-dark/75 px-1 py-0.5 text-[11px]">
+                    ★ {p.avg.toFixed(1).replace(".", ",")}
+                  </span>
+                ) : (
+                  "–"
+                )}
+              </td>
+              <td className="py-2 px-1.5 text-right font-mono text-moss-soft whitespace-nowrap text-[11px]">
+                {p.baseRating != null ? `★ ${p.baseRating.toFixed(1).replace(".", ",")}` : "–"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -301,33 +299,29 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
                     {a.player.isGoalkeeper && <GloveBadge className="ml-0.5" />}
                   </div>
 
-                  {match.status !== "FINISHED" && (
-                    <form action={removeAttendance.bind(null, match.id, a.id)} className="shrink-0">
-                      <SubmitButton
-                        className="text-brick bg-paper hover:bg-brick hover:text-paper border border-moss/15 px-2.5 py-1 text-[10px] font-extrabold uppercase shadow-none rounded-md"
-                        confirm={`Remover ${a.player.name} desta partida?`}
-                      >
-                        Remover
-                      </SubmitButton>
-                    </form>
-                  )}
+                  <form action={removeAttendance.bind(null, match.id, a.id)} className="shrink-0">
+                    <SubmitButton
+                      className="text-brick bg-paper hover:bg-brick hover:text-paper border border-moss/15 px-2.5 py-1 text-[10px] font-extrabold uppercase shadow-none rounded-md"
+                      confirm={`Remover ${a.player.name} desta partida?`}
+                    >
+                      Remover
+                    </SubmitButton>
+                  </form>
                 </div>
 
                 {/* Linha 2: Seletores de Cor e Goleiro Fixo */}
-                {match.status !== "FINISHED" && (
-                  <div className="pt-2 border-t border-moss/10 flex items-center justify-between gap-2 flex-wrap">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-moss-soft">
-                      Time:
-                    </span>
-                    <TeamColorSelector
-                      matchId={match.id}
-                      attendanceId={a.id}
-                      playerId={a.playerId}
-                      currentTeam={a.team}
-                      isGoalkeeper={a.asGoalkeeper || a.player.isGoalkeeper}
-                    />
-                  </div>
-                )}
+                <div className="pt-2 border-t border-moss/10 flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-moss-soft">
+                    Time:
+                  </span>
+                  <TeamColorSelector
+                    matchId={match.id}
+                    attendanceId={a.id}
+                    playerId={a.playerId}
+                    currentTeam={a.team}
+                    isGoalkeeper={a.asGoalkeeper || a.player.isGoalkeeper}
+                  />
+                </div>
               </li>
             ))}
           </ul>
@@ -336,51 +330,49 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
         )}
 
         {/* Adicionar Jogadores à Partida */}
-        {match.status !== "FINISHED" && (
-          <div className="mt-2 pt-4 border-t border-moss/10 flex flex-col gap-4">
-            <h3 className="font-serif text-lg text-moss">Adicionar Jogadores</h3>
+        <div className="mt-2 pt-4 border-t border-moss/10 flex flex-col gap-4">
+          <h3 className="font-serif text-lg text-moss">Adicionar Jogadores</h3>
 
-            {availablePlayers.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-moss-soft">
-                  Selecionar do Cadastro ({availablePlayers.length} disponíveis)
-                </span>
-                <AttendanceChecklist
-                  players={availablePlayers.map((p) => ({
-                    id: p.id,
-                    name: p.name,
-                    isGoalkeeper: p.isGoalkeeper,
-                    baseRating: p.baseRating,
-                  }))}
-                  action={addAttendances.bind(null, match.id)}
-                />
-              </div>
-            ) : (
-              <p className="text-xs text-moss-soft italic">
-                Todos os jogadores ativos já estão presentes nesta partida.
-              </p>
-            )}
+          {availablePlayers.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-moss-soft">
+                Selecionar do Cadastro ({availablePlayers.length} disponíveis)
+              </span>
+              <AttendanceChecklist
+                players={availablePlayers.map((p) => ({
+                  id: p.id,
+                  name: p.name,
+                  isGoalkeeper: p.isGoalkeeper,
+                  baseRating: p.baseRating,
+                }))}
+                action={addAttendances.bind(null, match.id)}
+              />
+            </div>
+          ) : (
+            <p className="text-xs text-moss-soft italic">
+              Todos os jogadores ativos já estão presentes nesta partida.
+            </p>
+          )}
 
-            {/* Colar lista de nomes */}
-            <details className="border-t border-moss/10 pt-2">
-              <summary className="text-xs font-extrabold uppercase tracking-wider text-brick cursor-pointer underline">
-                + Adicionar por Lista de Nomes (Colar texto ou lista numerada)
-              </summary>
-              <form action={addAttendancesByText.bind(null, match.id)} className="flex flex-col gap-2 mt-3">
-                <textarea
-                  name="names"
-                  rows={4}
-                  className="w-full rounded-lg border border-moss/20 focus:border-moss bg-white/85 px-3 py-2 text-xs font-mono text-moss outline-none"
-                  placeholder={`1. Paulo Ricardo\n2. Tuguinho\n3. Ricardo...`}
-                  required
-                />
-                <SubmitButton className="bg-moss text-paper hover:bg-moss-soft py-2 text-xs font-extrabold uppercase tracking-wider shadow-hard-sm border-transparent">
-                  Importar e Adicionar à Partida
-                </SubmitButton>
-              </form>
-            </details>
-          </div>
-        )}
+          {/* Colar lista de nomes */}
+          <details className="border-t border-moss/10 pt-2">
+            <summary className="text-xs font-extrabold uppercase tracking-wider text-brick cursor-pointer underline">
+              + Adicionar por Lista de Nomes (Colar texto ou lista numerada)
+            </summary>
+            <form action={addAttendancesByText.bind(null, match.id)} className="flex flex-col gap-2 mt-3">
+              <textarea
+                name="names"
+                rows={4}
+                className="w-full rounded-lg border border-moss/20 focus:border-moss bg-white/85 px-3 py-2 text-xs font-mono text-moss outline-none"
+                placeholder={`1. Paulo Ricardo\n2. Tuguinho\n3. Ricardo...`}
+                required
+              />
+              <SubmitButton className="bg-moss text-paper hover:bg-moss-soft py-2 text-xs font-extrabold uppercase tracking-wider shadow-hard-sm border-transparent">
+                Importar e Adicionar à Partida
+              </SubmitButton>
+            </form>
+          </details>
+        </div>
       </SpotlightCard>
 
       {/* Editar Dados da Partida */}
