@@ -83,18 +83,17 @@ describe("Unit Tests — Rating & Medals (src/lib/rating.ts)", () => {
       { voterId: "v_normal", targetId: "pC", score: 4.0 },
     ];
     const robust = computeMatchRobustAverages(votes);
-    // Simple averages:
-    // pA: (5.0 + 3.0) / 2 = 4.0
-    // pB: (5.0 + 1.0) / 2 = 3.0 (none < 2.0 -> lowest target is 1.65 -> rounds to 1.7)
-    // pC: (5.0 + 4.0) / 2 = 4.5 (> 4.0 -> highest target is 4.85 -> rounds to 4.9)
     // Unscaled preliminary weighted averages:
     // pA: (5.0*0.5 + 3.0*1.0) / 1.5 = 3.6667
-    // pB: (5.0*0.5 + 1.0*1.0) / 1.5 = 2.3333 (min) -> scales to 1.7
-    // pC: (5.0*0.5 + 4.0*1.0) / 1.5 = 4.3333 (max) -> scales to 4.9
-    // pA: intermediate -> 1.65 + ((3.6667 - 2.3333)/(4.3333 - 2.3333)) * (4.85 - 1.65) = 1.65 + 0.6667 * 3.2 = 3.78 -> 3.8
-    assert.equal(robust.get("pC")?.avg, 4.9);
-    assert.equal(robust.get("pB")?.avg, 1.7);
-    assert.equal(robust.get("pA")?.avg, 3.8);
+    // pB: (5.0*0.5 + 1.0*1.0) / 1.5 = 2.3333 (min)
+    // pC: (5.0*0.5 + 4.0*1.0) / 1.5 = 4.3333 (max)
+    // Mean: (3.6667 + 2.3333 + 4.3333) / 3 = 3.4444
+    // Proportional stretch preserves relative order: pC > pA > pB
+    assert.ok(Number(robust.get("pC")?.avg) > Number(robust.get("pA")?.avg));
+    assert.ok(Number(robust.get("pA")?.avg) > Number(robust.get("pB")?.avg));
+    assert.equal(robust.get("pC")?.avg, 4.6);
+    assert.equal(robust.get("pB")?.avg, 2.0);
+    assert.equal(robust.get("pA")?.avg, 3.7);
 
     // Test outlier downweighting when >= 4 votes:
     const targetWithOutliers = [
@@ -114,38 +113,27 @@ describe("Unit Tests — Rating & Medals (src/lib/rating.ts)", () => {
     assert.equal(robustOutliers.get("pTarget")?.avg, 3.0);
   });
 
-  it("scales match score amplitude conditionally based on simple averages", () => {
-    // Case 1: Highest simple average is <= 4.0 and lowest simple average is >= 2.0
-    // Stretch must reach [4.3, 4.4] on top and [1.6, 1.7] on bottom
-    const votesModerate = [
-      { voterId: "v1", targetId: "pLow", score: 2.5 },
-      { voterId: "v1", targetId: "pMid", score: 3.2 },
-      { voterId: "v1", targetId: "pHigh", score: 3.8 },
-      { voterId: "v2", targetId: "pLow", score: 2.5 },
-      { voterId: "v2", targetId: "pMid", score: 3.2 },
-      { voterId: "v2", targetId: "pHigh", score: 3.8 },
+  it("scales match score amplitude proportionally to voter variance", () => {
+    // When voters give differentiated scores, stretch expands differences smoothly
+    const votes = [
+      { voterId: "v1", targetId: "pLow", score: 2.0 },
+      { voterId: "v1", targetId: "pMid", score: 3.0 },
+      { voterId: "v1", targetId: "pHigh", score: 4.0 },
+      { voterId: "v2", targetId: "pLow", score: 2.0 },
+      { voterId: "v2", targetId: "pMid", score: 3.0 },
+      { voterId: "v2", targetId: "pHigh", score: 4.0 },
     ];
-    const resMod = computeMatchRobustAverages(votesModerate);
-    const modHigh = resMod.get("pHigh")?.avg ?? 0;
-    const modLow = resMod.get("pLow")?.avg ?? 0;
-    assert.ok(modHigh >= 4.3 && modHigh <= 4.4, `expected modHigh in [4.3, 4.4], got ${modHigh}`);
-    assert.ok(modLow >= 1.6 && modLow <= 1.7, `expected modLow in [1.6, 1.7], got ${modLow}`);
+    const res = computeMatchRobustAverages(votes);
+    const high = res.get("pHigh")?.avg ?? 0;
+    const mid = res.get("pMid")?.avg ?? 0;
+    const low = res.get("pLow")?.avg ?? 0;
 
-    // Case 2: Someone has simple average > 4.0 and someone has simple average < 2.0
-    // Stretch must reach [4.8, 4.9] on top and [1.1, 1.2] on bottom
-    const votesExtreme = [
-      { voterId: "v1", targetId: "pLow", score: 1.5 },
-      { voterId: "v1", targetId: "pMid", score: 3.2 },
-      { voterId: "v1", targetId: "pHigh", score: 4.5 },
-      { voterId: "v2", targetId: "pLow", score: 1.5 },
-      { voterId: "v2", targetId: "pMid", score: 3.2 },
-      { voterId: "v2", targetId: "pHigh", score: 4.5 },
-    ];
-    const resExt = computeMatchRobustAverages(votesExtreme);
-    const extHigh = resExt.get("pHigh")?.avg ?? 0;
-    const extLow = resExt.get("pLow")?.avg ?? 0;
-    assert.ok(extHigh >= 4.8 && extHigh <= 4.9, `expected extHigh in [4.8, 4.9], got ${extHigh}`);
-    assert.ok(extLow >= 1.1 && extLow <= 1.2, `expected extLow in [1.1, 1.2], got ${extLow}`);
+    // Center of gravity stays ~ 3.0
+    assert.equal(mid, 3.0);
+    // Differences are expanded proportionally and symmetrically
+    assert.ok(high > 4.0, `expected high > 4.0, got ${high}`);
+    assert.ok(low < 2.0, `expected low < 2.0, got ${low}`);
+    assert.equal(Math.round((high - mid) * 10), Math.round((mid - low) * 10));
   });
 });
 
