@@ -284,36 +284,27 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
 
         {/* Lista atual (Full width rows so GloveBadge never covers the name) */}
         {match.attendances.length ? (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-2.5">
             {match.attendances.map((a, i) => (
               <li
                 key={a.id}
-                className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-moss/12 bg-white/70 text-xs gap-3 flex-wrap sm:flex-nowrap"
+                className="flex flex-col gap-2.5 p-3 rounded-xl border border-moss/12 bg-white/75 text-xs shadow-2xs hover:border-moss/25 transition-all"
               >
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <span className="inline-flex items-center justify-center min-w-6 h-5 px-1.5 rounded-md bg-moss/10 text-moss font-mono text-[10px] font-extrabold shrink-0">
-                    {i + 1}
-                  </span>
-                  <TeamColorBadge team={a.team} />
-                  <span className="truncate font-bold text-sm text-moss">{a.player.name}</span>
-                  {a.player.isGoalkeeper && <GloveBadge className="ml-0.5" />}
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {match.status !== "FINISHED" && (
-                    <TeamColorSelector
-                      matchId={match.id}
-                      attendanceId={a.id}
-                      playerId={a.playerId}
-                      currentTeam={a.team}
-                      isGoalkeeper={a.asGoalkeeper || a.player.isGoalkeeper}
-                    />
-                  )}
+                {/* Linha 1: Número, Cor atual, Nome do Jogador e Botão Remover */}
+                <div className="flex items-center justify-between gap-3 min-w-0">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <span className="inline-flex items-center justify-center min-w-6 h-5 px-1.5 rounded-md bg-moss/10 text-moss font-mono text-[10px] font-extrabold shrink-0">
+                      {i + 1}
+                    </span>
+                    <TeamColorBadge team={a.team} />
+                    <span className="truncate font-bold text-base text-moss">{a.player.name}</span>
+                    {a.player.isGoalkeeper && <GloveBadge className="ml-0.5" />}
+                  </div>
 
                   {match.status !== "FINISHED" && (
-                    <form action={removeAttendance.bind(null, match.id, a.id)}>
+                    <form action={removeAttendance.bind(null, match.id, a.id)} className="shrink-0">
                       <SubmitButton
-                        className="text-brick bg-paper/90 hover:bg-brick hover:text-paper border border-moss/15 px-2.5 py-1 text-[10px] font-extrabold uppercase shadow-none rounded-md"
+                        className="text-brick bg-paper hover:bg-brick hover:text-paper border border-moss/15 px-2.5 py-1 text-[10px] font-extrabold uppercase shadow-none rounded-md"
                         confirm={`Remover ${a.player.name} desta partida?`}
                       >
                         Remover
@@ -321,6 +312,22 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
                     </form>
                   )}
                 </div>
+
+                {/* Linha 2: Seletores de Cor e Goleiro Fixo */}
+                {match.status !== "FINISHED" && (
+                  <div className="pt-2 border-t border-moss/10 flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-moss-soft">
+                      Equipe e Posição:
+                    </span>
+                    <TeamColorSelector
+                      matchId={match.id}
+                      attendanceId={a.id}
+                      playerId={a.playerId}
+                      currentTeam={a.team}
+                      isGoalkeeper={a.asGoalkeeper || a.player.isGoalkeeper}
+                    />
+                  </div>
+                )}
               </li>
             ))}
           </ul>
