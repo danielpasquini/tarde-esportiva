@@ -317,7 +317,7 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
                 {match.status !== "FINISHED" && (
                   <div className="pt-2 border-t border-moss/10 flex items-center justify-between gap-2 flex-wrap">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-moss-soft">
-                      Equipe e Posição:
+                      Time:
                     </span>
                     <TeamColorSelector
                       matchId={match.id}
