@@ -9,34 +9,22 @@ const TEAMS = [
   {
     id: "azul",
     label: "Azul",
-    swatch: "bg-blue-600",
-    activeClass: "bg-blue-600 text-white ring-2 ring-blue-500 ring-offset-1 border-blue-700 shadow-md",
-    inactiveClass: "bg-blue-50/80 text-blue-900 border-blue-200 hover:bg-blue-100/80",
-    dotClass: "bg-blue-600 shadow-[0_0_6px_rgba(37,99,235,0.6)]",
+    colorClass: "bg-blue-600 border-blue-700",
   },
   {
     id: "vermelho",
     label: "Vermelho",
-    swatch: "bg-red-600",
-    activeClass: "bg-red-600 text-white ring-2 ring-red-500 ring-offset-1 border-red-700 shadow-md",
-    inactiveClass: "bg-red-50/80 text-red-900 border-red-200 hover:bg-red-100/80",
-    dotClass: "bg-red-600 shadow-[0_0_6px_rgba(220,38,38,0.6)]",
+    colorClass: "bg-red-600 border-red-700",
   },
   {
     id: "preto",
     label: "Preto",
-    swatch: "bg-neutral-900",
-    activeClass: "bg-neutral-900 text-white ring-2 ring-neutral-800 ring-offset-1 border-black shadow-md",
-    inactiveClass: "bg-neutral-100 text-neutral-900 border-neutral-300 hover:bg-neutral-200",
-    dotClass: "bg-neutral-900 shadow-[0_0_6px_rgba(23,23,23,0.5)]",
+    colorClass: "bg-neutral-900 border-neutral-950",
   },
   {
     id: "amarelo",
     label: "Amarelo",
-    swatch: "bg-amber-400",
-    activeClass: "bg-amber-300 text-amber-950 ring-2 ring-amber-400 ring-offset-1 border-amber-400 font-black shadow-md",
-    inactiveClass: "bg-amber-50/90 text-amber-950 border-amber-300/80 hover:bg-amber-100",
-    dotClass: "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]",
+    colorClass: "bg-amber-400 border-amber-500",
   },
 ] as const;
 
@@ -74,7 +62,7 @@ export function TeamColorSelector({
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-paper-dark/75 border border-moss/15 shadow-2xs">
+      <div className="inline-flex items-center gap-1.5 p-1 rounded-xl bg-paper-dark/75 border border-moss/15 shadow-2xs">
         {TEAMS.map((t) => {
           const isSelected = currentTeam === t.id;
           return (
@@ -85,14 +73,22 @@ export function TeamColorSelector({
               onClick={() => handleSelectTeam(t.id)}
               title={`Time ${t.label}${isSelected ? " (Selecionado - clique para remover)" : ""}`}
               className={cn(
-                "size-7 rounded-lg transition-all flex items-center justify-center border cursor-pointer select-none active:scale-90",
+                "size-7 rounded-full transition-all flex items-center justify-center cursor-pointer select-none active:scale-95 border",
+                t.colorClass,
                 isSelected
-                  ? `${t.activeClass} scale-105`
-                  : "bg-white/80 border-moss/15 hover:bg-white hover:scale-105 opacity-80 hover:opacity-100",
+                  ? "ring-2 ring-moss ring-offset-2 ring-offset-paper opacity-100"
+                  : "opacity-40 hover:opacity-85 border-transparent",
                 pending && "opacity-50 cursor-wait",
               )}
             >
-              <span className={cn("size-3 rounded-full shrink-0 border border-white/40", t.dotClass)} />
+              {isSelected && (
+                <span
+                  className={cn(
+                    "size-2 rounded-full",
+                    t.id === "amarelo" ? "bg-amber-950" : "bg-white",
+                  )}
+                />
+              )}
             </button>
           );
         })}
