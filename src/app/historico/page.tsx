@@ -184,14 +184,6 @@ async function History() {
       <SpotlightCard className="border border-moss/15 bg-paper p-4 sm:p-5 rounded-2xl shadow-hard flex flex-col gap-4">
         <div className="flex items-end justify-between border-b border-moss/15 pb-2.5">
           <div>
-            <span className="hud-tag bg-brick text-paper border-transparent mb-1">
-              <ShinyText
-                text={isOrganizer ? "Elenco • Modo Organizador" : "Elenco da Tarde"}
-                color="#f6f4ef"
-                shineColor="#ffffff"
-                speed={2.2}
-              />
-            </span>
             <h2 className="font-serif text-2xl text-moss leading-none">
               <SplitText text="Jogadores" tag="span" />
             </h2>
