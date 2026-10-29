@@ -65,9 +65,10 @@ async function VoteView({
   const voterId = typeof sp.jogador === "string" ? sp.jogador : undefined;
   const voter = people.find((p) => p.id === voterId);
 
-  // Verificar no servidor se o jogador tem PIN e se o cookie de PIN é válido
+  // Modo público ativo: proteção por PIN temporariamente desligada (código preservado)
+  const PIN_PROTECTION_ENABLED = false;
   let isVoterPinVerified = true;
-  if (voter && voter.pin) {
+  if (PIN_PROTECTION_ENABLED && voter && voter.pin) {
     const cookieStore = await cookies();
     const cookiePin = cookieStore.get(`player_pin_${voter.id}`)?.value;
     const organizer = await isAdmin();

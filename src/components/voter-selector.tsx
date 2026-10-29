@@ -27,6 +27,12 @@ export function VoterSelector({
 
   const handleSelect = (p: VoterPerson) => {
     if (p.hasVoted) return;
+    // Modo público ativo: proteção por PIN temporariamente desligada (código preservado)
+    const PIN_PROTECTION_ENABLED = false;
+    if (!PIN_PROTECTION_ENABLED) {
+      router.push(`/votar/${token}?jogador=${p.id}`);
+      return;
+    }
     setErrorMsg("");
     setPinInput("");
     setSelectedPerson(p);

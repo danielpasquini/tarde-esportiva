@@ -9,6 +9,10 @@ import { normalizeScore } from "@/lib/rating";
 export type VoteInput = { targetId: string; score: number };
 
 async function hasPlayerAccess(playerId: string, playerPin: string | null): Promise<boolean> {
+  // Modo público ativo: proteção por PIN temporariamente desligada (mantém métodos intactos)
+  const PIN_PROTECTION_ENABLED = false;
+  if (!PIN_PROTECTION_ENABLED) return true;
+
   if (!playerPin) return true;
   if (await isAdmin()) return true;
   const cookieStore = await cookies();

@@ -61,8 +61,9 @@ async function Profile({ params }: Props) {
   const cookiePin = cookieStore.get(`player_pin_${id}`)?.value;
   const hasValidPinCookie = cookiePin != null && cookiePin === player.pin;
 
-  // Se o perfil tem PIN cadastrado e não é público, exige o PIN na porta de entrada
-  const isPinLockedForVisitor = Boolean(player.pin) && !hasValidPinCookie && !isOrganizer && !player.isPublic;
+  // Modo público ativo: proteção por PIN temporariamente desligada (código preservado)
+  const PIN_PROTECTION_ENABLED = false;
+  const isPinLockedForVisitor = PIN_PROTECTION_ENABLED && Boolean(player.pin) && !hasValidPinCookie && !isOrganizer && !player.isPublic;
 
   if (isPinLockedForVisitor) {
     return (
@@ -80,9 +81,9 @@ async function Profile({ params }: Props) {
     );
   }
 
-  // Notas e classificação geral só aparecem para o dono autenticado por PIN, organizador ou se o perfil for público
-  const hasOwnerAccess = isOrganizer || hasValidPinCookie;
-  const canSeeSecretRatings = Boolean(player.pin) ? hasOwnerAccess || player.isPublic : isOrganizer;
+  // Notas e classificação geral públicas por padrão enquanto PIN_PROTECTION_ENABLED estiver desligado
+  const hasOwnerAccess = !PIN_PROTECTION_ENABLED || isOrganizer || hasValidPinCookie;
+  const canSeeSecretRatings = !PIN_PROTECTION_ENABLED || (Boolean(player.pin) ? hasOwnerAccess || player.isPublic : isOrganizer);
 
   const [allActivePlayers, totalMatchesCount, matchVotes, finishedVotes] = await Promise.all([
     db.player.findMany({
