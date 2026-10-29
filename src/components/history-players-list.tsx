@@ -164,21 +164,9 @@ export function HistoryPlayersList({
                     {/* Faixa de Badges + Nota + Botão Perfil */}
                     <div className="flex items-center justify-between gap-2 flex-wrap bg-white/85 border border-moss/12 rounded-lg p-2.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {p.isGoalkeeper ? (
-                          <GloveBadge />
-                        ) : (
-                          <span className="inline-flex items-center rounded-sm bg-moss/8 border border-moss/15 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-moss">
-                            Linha
-                          </span>
-                        )}
+                        {p.isGoalkeeper && <GloveBadge />}
 
-                        {totalMedals > 0 ? (
-                          <PlayerMedals medals={p.medals} />
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-sm bg-paper-dark/80 border border-moss/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-moss-soft">
-                            <Award className="size-2.5" /> 0 medalhas
-                          </span>
-                        )}
+                        {totalMedals > 0 && <PlayerMedals medals={p.medals} />}
 
                         {isOrganizer && (
                           p.baseRating != null ? (
