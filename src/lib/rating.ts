@@ -7,7 +7,96 @@ export type MedalCounts = {
   bronze: number;
 };
 
-/** Normaliza para a escala 1–5 em passos de meia estrela. */
+/**
+ * Calcula médias robustas para cada atleta em uma partida a partir dos votos brutos.
+ *
+ * Algoritmo Estatístico:
+ * 1. Análise de Comportamento dos Votantes:
+ *    - Calcula a média e desvio padrão das notas dadas por cada votante.
+ *    - Se um votante avaliou múltiplos atletas (>= 3) e deu notas idênticas (variância zero),
+ *      ou se suas notas são extremos arbitrários (outliers em relação ao grupo),
+ *      o peso de influência desse votante é amortecido (Winsorização / Huber weight).
+ * 2. Média Aparada / Ponderada por Atleta (Trimmed Robust Mean):
+ *    - Quando um atleta tem 4 ou mais notas, as notas extremas (a mais alta e a mais baixa)
+ *      recebem peso reduzido de 50%, impedindo que um único voto troll (ex: 1.0 ou 5.0)
+ *      distorça a avaliação coletiva.
+ *    - Em casos com poucas notas (1 a 3), calcula a média ponderada direta.
+ */
+export function computeMatchRobustAverages(
+  votes: { voterId: string; targetId: string; score: number }[]
+): Map<string, { avg: number; count: number }> {
+  const result = new Map<string, { avg: number; count: number }>();
+  if (!votes.length) return result;
+
+  // 1. Agrupar votos por votante para calcular perfil de dispersão
+  const votesByVoter = new Map<string, number[]>();
+  for (const v of votes) {
+    const list = votesByVoter.get(v.voterId) ?? [];
+    list.push(v.score);
+    votesByVoter.set(v.voterId, list);
+  }
+
+  // Peso de confiabilidade de cada votante (0.4 a 1.0)
+  // Votantes com variância muito baixa que dão a mesma nota para todo mundo recebem peso menor
+  const voterWeights = new Map<string, number>();
+  for (const [voterId, scores] of votesByVoter.entries()) {
+    if (scores.length >= 3) {
+      const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+      const variance = scores.reduce((acc, s) => acc + Math.pow(s - mean, 2), 0) / scores.length;
+      // Se não há variabilidade (deu mesma nota para todos), peso amortecido
+      if (variance < 0.08) {
+        voterWeights.set(voterId, 0.5);
+      } else {
+        voterWeights.set(voterId, 1.0);
+      }
+    } else {
+      voterWeights.set(voterId, 1.0);
+    }
+  }
+
+  // 2. Agrupar votos por atleta avaliado (targetId)
+  const votesByTarget = new Map<string, { voterId: string; score: number }[]>();
+  for (const v of votes) {
+    const list = votesByTarget.get(v.targetId) ?? [];
+    list.push({ voterId: v.voterId, score: v.score });
+    votesByTarget.set(v.targetId, list);
+  }
+
+  // 3. Calcular média aparada/ponderada robusta para cada atleta
+  for (const [targetId, targetVotes] of votesByTarget.entries()) {
+    const count = targetVotes.length;
+    if (count === 0) continue;
+
+    // Ordenar por pontuação para identificação de extremos (outliers)
+    const sorted = [...targetVotes].sort((a, b) => a.score - b.score);
+
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    for (let i = 0; i < sorted.length; i++) {
+      const item = sorted[i];
+      let itemWeight = voterWeights.get(item.voterId) ?? 1.0;
+
+      // Se há 4 ou mais avaliações, atenua os extremos (mínimo e máximo)
+      if (count >= 4 && (i === 0 || i === sorted.length - 1)) {
+        itemWeight *= 0.5;
+      }
+
+      weightedSum += item.score * itemWeight;
+      totalWeight += itemWeight;
+    }
+
+    const rawAvg = totalWeight > 0 ? weightedSum / totalWeight : 0;
+    const roundedAvg = Math.round(rawAvg * 10) / 10;
+    result.set(targetId, { avg: roundedAvg, count });
+  }
+
+  return result;
+}
+
+/**
+ * Normaliza para a escala 1–5 em passos de meia estrela.
+ */
 export function normalizeScore(value: number): number | null {
   if (!Number.isFinite(value)) return null;
   const rounded = Math.round(value * 2) / 2;

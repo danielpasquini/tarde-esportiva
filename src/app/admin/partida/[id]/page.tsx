@@ -17,6 +17,7 @@ import {
   updateMatchConfig,
 } from "@/app/admin/actions";
 import { CopyLink, ShareVotingLink, SubmitButton } from "@/components/client";
+import { computeMatchRobustAverages } from "@/lib/rating";
 import { AttendanceChecklist } from "@/components/attendance-checklist";
 import { TeamColorSelector } from "@/components/team-color-selector";
 import { Loading, StatusStamp, GloveBadge, TeamColorBadge } from "@/components/ui";
@@ -26,12 +27,10 @@ import SplitText from "@/components/SplitText";
 import ShinyText from "@/components/ShinyText";
 
 async function AdminVotesTable({ matchId }: { matchId: string }) {
-  const [averages, attendances] = await Promise.all([
-    db.vote.groupBy({
-      by: ["targetId"],
+  const [votes, attendances] = await Promise.all([
+    db.vote.findMany({
       where: { matchId },
-      _avg: { score: true },
-      _count: { score: true },
+      select: { voterId: true, targetId: true, score: true },
     }),
     db.attendance.findMany({
       where: { matchId },
@@ -39,20 +38,20 @@ async function AdminVotesTable({ matchId }: { matchId: string }) {
     }),
   ]);
 
-  const avgMap = new Map(averages.map((a) => [a.targetId, a._avg.score ?? 0]));
-  const countMap = new Map(averages.map((a) => [a.targetId, a._count.score ?? 0]));
+  const robustMap = computeMatchRobustAverages(votes);
 
   const sorted = attendances
     .map((att) => {
-      const rawAvg = avgMap.get(att.playerId) ?? 0;
-      const roundedAvg = Math.round(rawAvg * 10) / 10;
+      const stats = robustMap.get(att.playerId);
+      const roundedAvg = stats?.avg ?? 0;
+      const count = stats?.count ?? 0;
       return {
         id: att.playerId,
         name: att.player.name,
         team: att.team,
         isGoalkeeper: att.asGoalkeeper || att.player.isGoalkeeper,
         avg: roundedAvg,
-        count: countMap.get(att.playerId) ?? 0,
+        count,
         baseRating: att.player.baseRating,
       };
     })

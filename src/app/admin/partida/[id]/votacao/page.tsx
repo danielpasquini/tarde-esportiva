@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowUpRight, CheckCircle2, RotateCcw, Vote } from "lucide-r
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { formatMatchDate } from "@/lib/format";
+import { computeMatchRobustAverages } from "@/lib/rating";
 import { closeVoting, openVoting, reopenVoting } from "@/app/admin/actions";
 import { CopyLink, ShareVotingLink, SubmitButton } from "@/components/client";
 import { GloveBadge, Loading, StatusStamp, TeamColorBadge } from "@/components/ui";
@@ -21,15 +22,13 @@ async function MatchVotingAdminView({ params }: { params: Promise<{ id: string }
   const { id } = await params;
   await requireAdmin();
 
-  const [match, averages, attendances, distinctVoters] = await Promise.all([
+  const [match, votes, attendances, distinctVoters] = await Promise.all([
     db.match.findUnique({
       where: { id },
     }),
-    db.vote.groupBy({
-      by: ["targetId"],
+    db.vote.findMany({
       where: { matchId: id },
-      _avg: { score: true },
-      _count: { score: true },
+      select: { voterId: true, targetId: true, score: true },
     }),
     db.attendance.findMany({
       where: { matchId: id },
@@ -46,20 +45,20 @@ async function MatchVotingAdminView({ params }: { params: Promise<{ id: string }
   if (!match) notFound();
 
   const voterIds = new Set(distinctVoters.map((v) => v.voterId));
-  const avgMap = new Map(averages.map((a) => [a.targetId, a._avg.score ?? 0]));
-  const countMap = new Map(averages.map((a) => [a.targetId, a._count.score ?? 0]));
+  const robustMap = computeMatchRobustAverages(votes);
 
   const sorted = attendances
     .map((att) => {
-      const rawAvg = avgMap.get(att.playerId) ?? 0;
-      const roundedAvg = Math.round(rawAvg * 10) / 10;
+      const stats = robustMap.get(att.playerId);
+      const roundedAvg = stats?.avg ?? 0;
+      const count = stats?.count ?? 0;
       return {
         id: att.playerId,
         name: att.player.name,
         team: att.team,
         isGoalkeeper: att.asGoalkeeper || att.player.isGoalkeeper,
         avg: roundedAvg,
-        count: countMap.get(att.playerId) ?? 0,
+        count,
         baseRating: att.player.baseRating,
         hasVoted: voterIds.has(att.playerId),
       };

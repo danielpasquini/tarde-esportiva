@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireAdmin, signIn, signOut } from "@/lib/auth";
-import { nextBaseRating, revertBaseRating, normalizeScore } from "@/lib/rating";
+import { nextBaseRating, revertBaseRating, normalizeScore, computeMatchRobustAverages } from "@/lib/rating";
 import { parseLocalDateTime } from "@/lib/format";
 import { parseNumberedRoster } from "@/lib/parse-roster";
 
@@ -156,19 +156,19 @@ export async function deleteMatch(matchId: string) {
   });
 
   if (match && match.status === "FINISHED") {
-    const averages = await db.vote.groupBy({
-      by: ["targetId"],
+    const rawVotes = await db.vote.findMany({
       where: { matchId },
-      _avg: { score: true },
+      select: { voterId: true, targetId: true, score: true },
     });
+    const robustMap = computeMatchRobustAverages(rawVotes);
 
-    const playerIds = averages.map((a) => a.targetId);
+    const playerIds = Array.from(robustMap.keys());
     const players = await db.player.findMany({ where: { id: { in: playerIds } } });
-    const avgMap = new Map(averages.map((a) => [a.targetId, a._avg.score]));
 
     await db.$transaction([
       ...players.flatMap((p) => {
-        const avg = avgMap.get(p.id);
+        const stats = robustMap.get(p.id);
+        const avg = stats?.avg;
         if (avg == null) return [];
         return [
           db.player.update({
@@ -296,17 +296,19 @@ export async function closeVoting(matchId: string) {
   const match = await db.match.findUnique({ where: { id: matchId } });
   if (!match || match.status === "FINISHED") return;
 
-  const averages = await db.vote.groupBy({
-    by: ["targetId"],
+  const rawVotes = await db.vote.findMany({
     where: { matchId },
-    _avg: { score: true },
+    select: { voterId: true, targetId: true, score: true },
   });
-  const players = await db.player.findMany({ where: { id: { in: averages.map((a) => a.targetId) } } });
-  const avgOf = new Map(averages.map((a) => [a.targetId, a._avg.score ?? null]));
+  const robustMap = computeMatchRobustAverages(rawVotes);
+
+  const playerIds = Array.from(robustMap.keys());
+  const players = await db.player.findMany({ where: { id: { in: playerIds } } });
 
   await db.$transaction([
     ...players.flatMap((p) => {
-      const avg = avgOf.get(p.id);
+      const stats = robustMap.get(p.id);
+      const avg = stats?.avg;
       if (avg == null) return [];
       return [
         db.player.update({
@@ -330,19 +332,19 @@ export async function reopenVoting(matchId: string) {
   const match = await db.match.findUnique({ where: { id: matchId } });
   if (!match || match.status !== "FINISHED") return;
 
-  const averages = await db.vote.groupBy({
-    by: ["targetId"],
+  const rawVotes = await db.vote.findMany({
     where: { matchId },
-    _avg: { score: true },
+    select: { voterId: true, targetId: true, score: true },
   });
+  const robustMap = computeMatchRobustAverages(rawVotes);
 
-  const playerIds = averages.map((a) => a.targetId);
+  const playerIds = Array.from(robustMap.keys());
   const players = await db.player.findMany({ where: { id: { in: playerIds } } });
-  const avgMap = new Map(averages.map((a) => [a.targetId, a._avg.score]));
 
   await db.$transaction([
     ...players.flatMap((p) => {
-      const avg = avgMap.get(p.id);
+      const stats = robustMap.get(p.id);
+      const avg = stats?.avg;
       if (avg == null) return [];
       return [
         db.player.update({

@@ -8,6 +8,7 @@ import {
   revertBaseRating,
   formatRating,
   computeMedalsFromVotes,
+  computeMatchRobustAverages,
 } from "../src/lib/rating";
 import {
   formatMatchDate,
@@ -64,6 +65,45 @@ describe("Unit Tests — Rating & Medals (src/lib/rating.ts)", () => {
     assert.deepEqual(medals.p2, { gold: 0, silver: 1, bronze: 0 });
     assert.deepEqual(medals.p3, { gold: 0, silver: 0, bronze: 1 });
     assert.equal(medals.p4, undefined);
+  });
+
+  it("computes robust match averages attenuating zero-variance voters and outliers", () => {
+    // Voter 1 gives identical 5.0 to 4 targets (variance = 0 -> weight 0.5)
+    // Voter 2 gives differentiated scores 3.0, 4.0, 2.0, 3.5 (variance > 0.08 -> weight 1.0)
+    // Target 1 receives 5 votes: [1.0, 3.0, 3.0, 3.0, 5.0] from voters with normal variance.
+    // In trimmed mean (>=4 votes), extreme min (1.0) and extreme max (5.0) get 50% discount.
+    const votes = [
+      // Zero variance voter:
+      { voterId: "v_flat", targetId: "pA", score: 5.0 },
+      { voterId: "v_flat", targetId: "pB", score: 5.0 },
+      { voterId: "v_flat", targetId: "pC", score: 5.0 },
+      // Normal voter:
+      { voterId: "v_normal", targetId: "pA", score: 3.0 },
+      { voterId: "v_normal", targetId: "pB", score: 1.0 },
+      { voterId: "v_normal", targetId: "pC", score: 4.0 },
+    ];
+    const robust = computeMatchRobustAverages(votes);
+    // For pA: scores are 5.0 (weight 0.5) and 3.0 (weight 1.0)
+    // Weighted avg = (5.0*0.5 + 3.0*1.0) / (0.5 + 1.0) = 5.5 / 1.5 = 3.666... -> rounded to 3.7
+    // Simple average would be (5.0 + 3.0) / 2 = 4.0
+    assert.equal(robust.get("pA")?.avg, 3.7);
+
+    // Test outlier downweighting when >= 4 votes:
+    const targetWithOutliers = [
+      { voterId: "v1", targetId: "pTarget", score: 1.0 }, // min outlier
+      { voterId: "v2", targetId: "pTarget", score: 3.0 },
+      { voterId: "v3", targetId: "pTarget", score: 3.0 },
+      { voterId: "v4", targetId: "pTarget", score: 3.0 },
+      { voterId: "v5", targetId: "pTarget", score: 5.0 }, // max outlier
+    ];
+    // Each voter has only 1 vote here so voterWeight is 1.0
+    // Min (1.0) weight = 0.5, Max (5.0) weight = 0.5
+    // Middle items weight = 1.0 each
+    // Sum = (1*0.5) + (3*1) + (3*1) + (3*1) + (5*0.5) = 0.5 + 3 + 3 + 3 + 2.5 = 12.0
+    // Total weight = 0.5 + 1 + 1 + 1 + 0.5 = 4.0
+    // Avg = 12.0 / 4.0 = 3.0
+    const robustOutliers = computeMatchRobustAverages(targetWithOutliers);
+    assert.equal(robustOutliers.get("pTarget")?.avg, 3.0);
   });
 });
 

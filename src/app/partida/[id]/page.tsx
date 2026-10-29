@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Radio, Trash2, Trophy, User, Vote } from "lucide
 import { db } from "@/lib/db";
 import { isAdmin } from "@/lib/auth";
 import { formatMatchDate } from "@/lib/format";
+import { computeMatchRobustAverages } from "@/lib/rating";
 import { deleteMatch } from "@/app/admin/actions";
 import { SubmitButton } from "@/components/client";
 import { GloveBadge, Loading, StatusStamp, TeamColorBadge } from "@/components/ui";
@@ -19,7 +20,7 @@ import ShinyText from "@/components/ShinyText";
 async function MatchView({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const { id } = await params;
-  const [match, averages, isOrganizer] = await Promise.all([
+  const [match, votes, isOrganizer] = await Promise.all([
     db.match.findUnique({
       where: { id },
       include: {
@@ -29,11 +30,9 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
         },
       },
     }),
-    db.vote.groupBy({
-      by: ["targetId"],
+    db.vote.findMany({
       where: { matchId: id },
-      _avg: { score: true },
-      _count: { score: true },
+      select: { voterId: true, targetId: true, score: true },
     }),
     isAdmin(),
   ]);
@@ -42,20 +41,19 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
     redirect("/");
   }
 
-  const avgMap = new Map(averages.map((a) => [a.targetId, a._avg.score ?? 0]));
-  const countMap = new Map(averages.map((a) => [a.targetId, a._count.score ?? 0]));
+  const robustMap = computeMatchRobustAverages(votes);
 
   const sortedRated = match.attendances
     .map((att) => {
-      const rawAvg = avgMap.get(att.playerId) ?? 0;
-      const avg = Math.round(rawAvg * 10) / 10;
+      const stats = robustMap.get(att.playerId);
+      const avg = stats?.avg ?? 0;
       return {
         id: att.playerId,
         name: att.player.name,
         team: att.team,
         isGoalkeeper: att.asGoalkeeper || att.player.isGoalkeeper,
         avg,
-        votesCount: countMap.get(att.playerId) ?? 0,
+        votesCount: stats?.count ?? 0,
       };
     })
     .filter((p) => p.avg > 0)
