@@ -83,14 +83,18 @@ describe("Unit Tests — Rating & Medals (src/lib/rating.ts)", () => {
       { voterId: "v_normal", targetId: "pC", score: 4.0 },
     ];
     const robust = computeMatchRobustAverages(votes);
-    // Unscaled preliminary averages:
+    // Simple averages:
+    // pA: (5.0 + 3.0) / 2 = 4.0
+    // pB: (5.0 + 1.0) / 2 = 3.0 (none < 2.0 -> lowest target is 1.65 -> rounds to 1.7)
+    // pC: (5.0 + 4.0) / 2 = 4.5 (> 4.0 -> highest target is 4.85 -> rounds to 4.9)
+    // Unscaled preliminary weighted averages:
     // pA: (5.0*0.5 + 3.0*1.0) / 1.5 = 3.6667
-    // pB: (5.0*0.5 + 1.0*1.0) / 1.5 = 2.3333
-    // pC: (5.0*0.5 + 4.0*1.0) / 1.5 = 4.3333
-    // Max is pC (scaled to 4.9), Min is pB (scaled to 1.15 -> 1.2), pA is intermediate (3.6)
+    // pB: (5.0*0.5 + 1.0*1.0) / 1.5 = 2.3333 (min) -> scales to 1.7
+    // pC: (5.0*0.5 + 4.0*1.0) / 1.5 = 4.3333 (max) -> scales to 4.9
+    // pA: intermediate -> 1.65 + ((3.6667 - 2.3333)/(4.3333 - 2.3333)) * (4.85 - 1.65) = 1.65 + 0.6667 * 3.2 = 3.78 -> 3.8
     assert.equal(robust.get("pC")?.avg, 4.9);
-    assert.equal(robust.get("pB")?.avg, 1.2);
-    assert.equal(robust.get("pA")?.avg, 3.6);
+    assert.equal(robust.get("pB")?.avg, 1.7);
+    assert.equal(robust.get("pA")?.avg, 3.8);
 
     // Test outlier downweighting when >= 4 votes:
     const targetWithOutliers = [
@@ -110,27 +114,38 @@ describe("Unit Tests — Rating & Medals (src/lib/rating.ts)", () => {
     assert.equal(robustOutliers.get("pTarget")?.avg, 3.0);
   });
 
-  it("scales match score amplitude so max reaches between 4.8 and 4.9 and min reaches between 1.1 and 1.2", () => {
-    // Suppose voters give narrow cluster of scores: 3.2, 3.4, 3.8
-    const votes = [
-      { voterId: "v1", targetId: "pLow", score: 3.2 },
-      { voterId: "v1", targetId: "pMid", score: 3.4 },
+  it("scales match score amplitude conditionally based on simple averages", () => {
+    // Case 1: Highest simple average is <= 4.0 and lowest simple average is >= 2.0
+    // Stretch must reach [4.3, 4.4] on top and [1.6, 1.7] on bottom
+    const votesModerate = [
+      { voterId: "v1", targetId: "pLow", score: 2.5 },
+      { voterId: "v1", targetId: "pMid", score: 3.2 },
       { voterId: "v1", targetId: "pHigh", score: 3.8 },
-      { voterId: "v2", targetId: "pLow", score: 3.2 },
-      { voterId: "v2", targetId: "pMid", score: 3.5 },
+      { voterId: "v2", targetId: "pLow", score: 2.5 },
+      { voterId: "v2", targetId: "pMid", score: 3.2 },
       { voterId: "v2", targetId: "pHigh", score: 3.8 },
     ];
-    const res = computeMatchRobustAverages(votes);
-    const highAvg = res.get("pHigh")?.avg ?? 0;
-    const lowAvg = res.get("pLow")?.avg ?? 0;
-    const midAvg = res.get("pMid")?.avg ?? 0;
+    const resMod = computeMatchRobustAverages(votesModerate);
+    const modHigh = resMod.get("pHigh")?.avg ?? 0;
+    const modLow = resMod.get("pLow")?.avg ?? 0;
+    assert.ok(modHigh >= 4.3 && modHigh <= 4.4, `expected modHigh in [4.3, 4.4], got ${modHigh}`);
+    assert.ok(modLow >= 1.6 && modLow <= 1.7, `expected modLow in [1.6, 1.7], got ${modLow}`);
 
-    // Highest player (pHigh) reaches between 4.8 and 4.9
-    assert.ok(highAvg >= 4.8 && highAvg <= 4.9, `expected highAvg between 4.8 and 4.9, got ${highAvg}`);
-    // Lowest player (pLow) reaches between 1.1 and 1.2
-    assert.ok(lowAvg >= 1.1 && lowAvg <= 1.2, `expected lowAvg between 1.1 and 1.2, got ${lowAvg}`);
-    // Middle player scales proportionally
-    assert.ok(midAvg > lowAvg && midAvg < highAvg);
+    // Case 2: Someone has simple average > 4.0 and someone has simple average < 2.0
+    // Stretch must reach [4.8, 4.9] on top and [1.1, 1.2] on bottom
+    const votesExtreme = [
+      { voterId: "v1", targetId: "pLow", score: 1.5 },
+      { voterId: "v1", targetId: "pMid", score: 3.2 },
+      { voterId: "v1", targetId: "pHigh", score: 4.5 },
+      { voterId: "v2", targetId: "pLow", score: 1.5 },
+      { voterId: "v2", targetId: "pMid", score: 3.2 },
+      { voterId: "v2", targetId: "pHigh", score: 4.5 },
+    ];
+    const resExt = computeMatchRobustAverages(votesExtreme);
+    const extHigh = resExt.get("pHigh")?.avg ?? 0;
+    const extLow = resExt.get("pLow")?.avg ?? 0;
+    assert.ok(extHigh >= 4.8 && extHigh <= 4.9, `expected extHigh in [4.8, 4.9], got ${extHigh}`);
+    assert.ok(extLow >= 1.1 && extLow <= 1.2, `expected extLow in [1.1, 1.2], got ${extLow}`);
   });
 });
 

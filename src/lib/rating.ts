@@ -94,20 +94,31 @@ export function computeMatchRobustAverages(
 
   if (unscaledAverages.length === 0) return result;
 
-  // 4. Calibração e Expansão de Amplitude (Min-Max Rescaling / Stretch)
-  // O objetivo é garantir que a amplitude do resultado seja expandida de forma que:
-  // - O maior jogador atinja entre 4,8 e 4,9 (ex: 4.85 -> 4.8 / 4.9)
-  // - O menor jogador atinja entre 1,1 e 1,2 (ex: 1.15 -> 1.1 / 1.2)
-  // - As notas intermediárias preservem proporcionalmente a distância dentro dessa escala.
-  const TARGET_MIN = 1.15;
-  const TARGET_MAX = 4.85;
-
+  // 4. Calibração e Expansão de Amplitude Condicional (Adaptive Min-Max Stretch)
+  // Regras de amplitude condicional baseadas nas médias simples dos jogadores:
+  // - Topo: se o jogador de maior média simples tiver média > 4.0, estica até [4.8, 4.9] (ex: 4.85).
+  //         caso contrário (nenhum jogador superou 4.0), estica até [4.3, 4.4] (ex: 4.35).
+  // - Base: se o jogador de menor média simples tiver média < 2.0, estica até [1.1, 1.2] (ex: 1.15).
+  //         caso contrário (nenhum jogador ficou abaixo de 2.0), estica até [1.6, 1.7] (ex: 1.65).
   if (unscaledAverages.length === 1) {
     const only = unscaledAverages[0];
     const rounded = Math.round(Math.max(1.0, Math.min(5.0, only.avg)) * 10) / 10;
     result.set(only.targetId, { avg: rounded, count: only.count });
     return result;
   }
+
+  // Calcular média simples de cada jogador avaliado para avaliar as condições
+  let highestSimpleAvg = -Infinity;
+  let lowestSimpleAvg = Infinity;
+  for (const [, targetVotes] of votesByTarget.entries()) {
+    if (!targetVotes.length) continue;
+    const simpleAvg = targetVotes.reduce((sum, v) => sum + v.score, 0) / targetVotes.length;
+    if (simpleAvg > highestSimpleAvg) highestSimpleAvg = simpleAvg;
+    if (simpleAvg < lowestSimpleAvg) lowestSimpleAvg = simpleAvg;
+  }
+
+  const TARGET_MAX = highestSimpleAvg > 4.0 ? 4.85 : 4.35;
+  const TARGET_MIN = lowestSimpleAvg < 2.0 ? 1.15 : 1.65;
 
   let minAvg = Infinity;
   let maxAvg = -Infinity;
