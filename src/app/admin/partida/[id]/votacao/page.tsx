@@ -139,7 +139,7 @@ async function MatchVotingAdminView({ params }: { params: Promise<{ id: string }
 
         {match.votingOpen && (
           <ShareVotingLink
-            url={`/votar/${match.voteToken}`}
+            url="/votar"
             matchDate={formatMatchDate(match.date)}
           />
         )}

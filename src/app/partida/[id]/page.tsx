@@ -128,7 +128,7 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
           className="border border-brick/35 bg-gradient-to-r from-amber-500/12 via-paper-dark to-paper rounded-2xl shadow-hard-brick transition-all active:scale-[0.99]"
         >
           <Link
-            href={`/votar/${match.voteToken}`}
+            href="/votar"
             className="flex items-center justify-between px-4 py-3.5 text-moss group"
             id="ir-votacao"
           >
