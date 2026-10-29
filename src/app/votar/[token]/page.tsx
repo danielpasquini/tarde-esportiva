@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { isAdmin } from "@/lib/auth";
 import { VoteForm } from "@/components/vote-form";
 import { VoterSelector } from "@/components/voter-selector";
-import { Loading } from "@/components/ui";
+import { Loading, TeamColorBadge } from "@/components/ui";
 import SpotlightCard from "@/components/SpotlightCard";
 import SplitText from "@/components/SplitText";
 import ShinyText from "@/components/ShinyText";
@@ -31,6 +31,7 @@ async function VoteView({
     .map((a) => ({
       id: a.playerId,
       name: a.player.name,
+      team: a.team,
       isGoalkeeper: a.asGoalkeeper || a.player.isGoalkeeper,
       pin: a.player.pin,
       hasPin: Boolean(a.player.pin),
@@ -131,7 +132,10 @@ async function VoteView({
       <div className="flex items-center justify-between border border-moss/15 rounded-xl bg-paper-dark/70 px-4 py-3 shadow-hard-sm">
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-brick">Votando como</p>
-          <p className="truncate font-serif text-lg leading-tight text-moss">{voter.name}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <TeamColorBadge team={voter.team} showLabel />
+            <p className="truncate font-serif text-lg leading-tight text-moss">{voter.name}</p>
+          </div>
         </div>
         <Link
           href={`/votar/${token}`}

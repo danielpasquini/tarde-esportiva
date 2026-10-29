@@ -18,7 +18,8 @@ import {
 } from "@/app/admin/actions";
 import { CopyLink, ShareVotingLink, SubmitButton } from "@/components/client";
 import { AttendanceChecklist } from "@/components/attendance-checklist";
-import { Loading, StatusStamp, GloveBadge } from "@/components/ui";
+import { TeamColorSelector } from "@/components/team-color-selector";
+import { Loading, StatusStamp, GloveBadge, TeamColorBadge } from "@/components/ui";
 import SpotlightCard from "@/components/SpotlightCard";
 import CountUp from "@/components/CountUp";
 import SplitText from "@/components/SplitText";
@@ -48,6 +49,7 @@ async function AdminVotesTable({ matchId }: { matchId: string }) {
       return {
         id: att.playerId,
         name: att.player.name,
+        team: att.team,
         isGoalkeeper: att.asGoalkeeper || att.player.isGoalkeeper,
         avg: roundedAvg,
         count: countMap.get(att.playerId) ?? 0,
@@ -89,6 +91,7 @@ async function AdminVotesTable({ matchId }: { matchId: string }) {
                     {p.avg > 0 && p.rank === 1 && <span className="text-xs leading-none shrink-0">🥇</span>}
                     {p.avg > 0 && p.rank === 2 && <span className="text-xs leading-none shrink-0">🥈</span>}
                     {p.avg > 0 && p.rank === 3 && <span className="text-xs leading-none shrink-0">🥉</span>}
+                    <TeamColorBadge team={p.team} />
                     <Link
                       href={`/perfil/${p.id}`}
                       className="truncate font-bold text-moss hover:text-brick hover:underline"
@@ -184,12 +187,14 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
           </div>
           <div className="flex items-center gap-2">
             <StatusStamp status={match.status} votingOpen={match.votingOpen} />
-            <Link
-              href={`/partida/${match.id}`}
-              className="inline-flex items-center gap-1 rounded-lg border border-moss/20 bg-white/80 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider hover:bg-moss hover:text-paper transition-colors"
-            >
-              Resumo <ArrowUpRight className="size-3.5" />
-            </Link>
+            {match.status === "FINISHED" && (
+              <Link
+                href={`/partida/${match.id}`}
+                className="inline-flex items-center gap-1 rounded-lg border border-moss/20 bg-white/80 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider hover:bg-moss hover:text-paper transition-colors"
+              >
+                Resumo <ArrowUpRight className="size-3.5" />
+              </Link>
+            )}
           </div>
         </div>
       </SpotlightCard>
@@ -283,26 +288,37 @@ async function MatchAdminView({ params }: { params: Promise<{ id: string }> }) {
             {match.attendances.map((a, i) => (
               <li
                 key={a.id}
-                className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-moss/12 bg-white/70 text-xs gap-3"
+                className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-moss/12 bg-white/70 text-xs gap-3 flex-wrap sm:flex-nowrap"
               >
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <span className="inline-flex items-center justify-center min-w-6 h-5 px-1.5 rounded-md bg-moss/10 text-moss font-mono text-[10px] font-extrabold shrink-0">
                     {i + 1}
                   </span>
+                  <TeamColorBadge team={a.team} />
                   <span className="truncate font-bold text-sm text-moss">{a.player.name}</span>
                   {a.player.isGoalkeeper && <GloveBadge className="ml-0.5" />}
                 </div>
 
-                {match.status !== "FINISHED" && (
-                  <form action={removeAttendance.bind(null, match.id, a.id)}>
-                    <SubmitButton
-                      className="text-brick bg-paper/90 hover:bg-brick hover:text-paper border border-moss/15 px-2.5 py-1 text-[10px] font-extrabold uppercase shadow-none rounded-md"
-                      confirm={`Remover ${a.player.name} desta partida?`}
-                    >
-                      Remover
-                    </SubmitButton>
-                  </form>
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {match.status !== "FINISHED" && (
+                    <TeamColorSelector
+                      matchId={match.id}
+                      attendanceId={a.id}
+                      currentTeam={a.team}
+                    />
+                  )}
+
+                  {match.status !== "FINISHED" && (
+                    <form action={removeAttendance.bind(null, match.id, a.id)}>
+                      <SubmitButton
+                        className="text-brick bg-paper/90 hover:bg-brick hover:text-paper border border-moss/15 px-2.5 py-1 text-[10px] font-extrabold uppercase shadow-none rounded-md"
+                        confirm={`Remover ${a.player.name} desta partida?`}
+                      >
+                        Remover
+                      </SubmitButton>
+                    </form>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

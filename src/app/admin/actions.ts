@@ -250,6 +250,16 @@ export async function removeAttendance(matchId: string, attendanceId: string) {
   revalidatePath("/historico");
 }
 
+export async function setAttendanceTeam(matchId: string, attendanceId: string, team: string | null) {
+  await requireAdmin();
+  const validTeam = team && ["azul", "vermelho", "preto", "amarelo"].includes(team) ? team : null;
+  await db.attendance.updateMany({
+    where: { id: attendanceId, matchId },
+    data: { team: validTeam },
+  });
+  touch(matchId);
+}
+
 /* ---------- Votação ---------- */
 
 export async function openVoting(matchId: string) {

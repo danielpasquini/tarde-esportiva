@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { ArrowRight, Radio, User, Users } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatMatchDate } from "@/lib/format";
-import { GloveBadge, Loading, StatusStamp } from "@/components/ui";
+import { GloveBadge, Loading, StatusStamp, TeamColorBadge } from "@/components/ui";
 import SpotlightCard from "@/components/SpotlightCard";
 import GlareHover from "@/components/GlareHover";
 import CountUp from "@/components/CountUp";
@@ -63,7 +63,7 @@ async function ActiveMatchCard() {
             <div>
               <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-brick">
                 <Radio className="size-3 animate-pulse text-brick" />
-                <ShinyText text="Urna aberta • Pós-jogo" color="#b47a16" shineColor="#16281e" speed={1.8} />
+                <ShinyText text="Votação Aberta • Pós-jogo" color="#b47a16" shineColor="#16281e" speed={1.8} />
               </span>
               <span className="block font-serif text-lg leading-tight mt-0.5 group-hover:text-brick transition-colors">
                 Votar nos Destaques da Partida
@@ -86,7 +86,7 @@ async function ActiveMatchCard() {
           <div>
             <span className="hud-tag bg-moss text-paper border-transparent mb-2">
               <ShinyText
-                text="Próxima Partida"
+                text={match.votingOpen ? "Partida Concluída" : "Próxima Partida"}
                 color="#f6f4ef"
                 shineColor="#d9a520"
                 speed={2.5}
@@ -155,6 +155,7 @@ async function ActiveMatchCard() {
                     <span className="inline-flex items-center justify-center min-w-6 h-5 px-1.5 rounded-md bg-moss/10 text-moss font-mono text-[10px] font-extrabold shrink-0">
                       {i + 1}
                     </span>
+                    <TeamColorBadge team={a.team} />
                     <span className="font-bold text-sm text-moss group-hover:text-brick transition-colors truncate">
                       {a.player.name}
                     </span>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowUpRight, Star, ChevronDown, Lock, Globe, User, Search, X, Award } from "lucide-react";
 import { formatShortDate } from "@/lib/format";
 import type { MedalCounts } from "@/lib/rating";
-import { GloveBadge, PlayerMedals } from "@/components/ui";
+import { GloveBadge, PlayerMedals, TeamColorBadge } from "@/components/ui";
 import CountUp from "@/components/CountUp";
 import Magnet from "@/components/Magnet";
 
@@ -270,6 +270,7 @@ export function HistoryPlayersList({
                               className="flex items-center justify-between px-2.5 py-1.5 text-xs transition-colors gap-2 hover:bg-paper-dark/40"
                             >
                               <div className="flex items-center gap-1.5 min-w-0">
+                                <TeamColorBadge team={att?.team} />
                                 <span className="font-bold text-moss text-[11px]">
                                   {formatShortDate(dateObj)}
                                 </span>

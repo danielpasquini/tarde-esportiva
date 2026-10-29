@@ -80,7 +80,7 @@ async function History() {
         const avg = scores.length
           ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
           : null;
-        attendanceMap[att.matchId] = { team: null, avg };
+        attendanceMap[att.matchId] = { team: att.team, avg };
       }
 
       const timesPlayed = Object.keys(attendanceMap).length;

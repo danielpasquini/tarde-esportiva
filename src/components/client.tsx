@@ -18,8 +18,8 @@ function tabClass(active: boolean) {
 
 function MainNavInner() {
   const pathname = usePathname() || "/";
-  const isHome = pathname === "/" || pathname.startsWith("/partida") || pathname.startsWith("/votar");
-  const isHistorico = pathname.startsWith("/historico") || pathname.startsWith("/perfil");
+  const isHome = pathname === "/" || pathname.startsWith("/votar");
+  const isHistorico = pathname.startsWith("/historico") || pathname.startsWith("/perfil") || pathname.startsWith("/partida");
   const isAdmin = pathname.startsWith("/admin");
 
   return (
@@ -154,21 +154,12 @@ export function ShareVotingLink({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleWhatsApp = () => {
-    const full = getFullUrl();
-    const message = `⚽ *Tarde Esportiva - Votação Aberta!* 🗳️\n${
-      matchDate ? `Partida de ${matchDate}\n` : ""
-    }Acesse a cédula oficial e avalie os destaques da rodada:\n${full}`;
-    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, "_blank", "noopener,noreferrer");
-  };
-
   return (
     <div className={cn("flex flex-col gap-2.5 p-3.5 bg-paper-dark/65 rounded-xl border border-moss/15", className)}>
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-brick block">
-            Urna Aberta • Link dos Participantes
+            Votação Aberta • Link dos Participantes
           </span>
           <span className="text-xs text-moss font-mono truncate block select-all">{url}</span>
         </div>
@@ -183,16 +174,8 @@ export function ShareVotingLink({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={handleWhatsApp}
-          className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#25D366] hover:bg-[#20ba59] text-white py-2 px-3 text-xs font-extrabold uppercase tracking-wider shadow-hard-sm transition-all active:scale-[0.99] cursor-pointer"
-        >
-          <span>📲 Enviar no WhatsApp</span>
-        </button>
-
-        <button
-          type="button"
           onClick={handleCopy}
-          className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 rounded-lg border border-moss/20 bg-white hover:bg-paper-dark py-2 px-3 text-xs font-extrabold uppercase tracking-wider text-moss shadow-hard-sm transition-all active:scale-[0.99] cursor-pointer"
+          className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-moss/20 bg-white hover:bg-paper-dark py-2 px-3 text-xs font-extrabold uppercase tracking-wider text-moss shadow-hard-sm transition-all active:scale-[0.99] cursor-pointer"
         >
           {copied ? (
             <>

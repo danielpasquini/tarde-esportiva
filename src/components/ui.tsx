@@ -9,6 +9,75 @@ export const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   FINISHED: { label: "Encerrada", cls: "stamp-done" },
 };
 
+export const TEAM_COLORS: Record<
+  string,
+  { label: string; bg: string; text: string; border: string; dot: string; ring: string }
+> = {
+  azul: {
+    label: "Azul",
+    bg: "bg-blue-600/15",
+    text: "text-blue-900",
+    border: "border-blue-600/35",
+    dot: "bg-blue-600",
+    ring: "ring-blue-500",
+  },
+  vermelho: {
+    label: "Vermelho",
+    bg: "bg-red-600/15",
+    text: "text-red-900",
+    border: "border-red-600/35",
+    dot: "bg-red-600",
+    ring: "ring-red-500",
+  },
+  preto: {
+    label: "Preto",
+    bg: "bg-neutral-900/15",
+    text: "text-neutral-900",
+    border: "border-neutral-900/40",
+    dot: "bg-neutral-900",
+    ring: "ring-neutral-900",
+  },
+  amarelo: {
+    label: "Amarelo",
+    bg: "bg-amber-400/25",
+    text: "text-amber-950",
+    border: "border-amber-500/45",
+    dot: "bg-amber-400",
+    ring: "ring-amber-400",
+  },
+};
+
+export function TeamColorBadge({
+  team,
+  showLabel = false,
+  className,
+}: {
+  team?: string | null;
+  showLabel?: boolean;
+  className?: string;
+}) {
+  if (!team) return null;
+  const normalized = team.toLowerCase().trim();
+  const config = TEAM_COLORS[normalized];
+  if (!config) return null;
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider shrink-0 border select-none leading-none align-middle shadow-2xs",
+        config.bg,
+        config.text,
+        config.border,
+        className,
+      )}
+      title={`Time ${config.label}`}
+    >
+      <span className={cn("size-2 rounded-full shrink-0 shadow-2xs", config.dot)} />
+      {showLabel && <span>{config.label}</span>}
+    </span>
+  );
+}
+
 export function GloveBadge({ className }: { className?: string; showLabel?: boolean }) {
   return (
     <span

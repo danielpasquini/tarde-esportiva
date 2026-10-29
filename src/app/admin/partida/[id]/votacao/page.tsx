@@ -8,7 +8,7 @@ import { requireAdmin } from "@/lib/auth";
 import { formatMatchDate } from "@/lib/format";
 import { closeVoting, openVoting, reopenVoting } from "@/app/admin/actions";
 import { CopyLink, ShareVotingLink, SubmitButton } from "@/components/client";
-import { GloveBadge, Loading, StatusStamp } from "@/components/ui";
+import { GloveBadge, Loading, StatusStamp, TeamColorBadge } from "@/components/ui";
 import SpotlightCard from "@/components/SpotlightCard";
 import CountUp from "@/components/CountUp";
 import SplitText from "@/components/SplitText";
@@ -56,6 +56,7 @@ async function MatchVotingAdminView({ params }: { params: Promise<{ id: string }
       return {
         id: att.playerId,
         name: att.player.name,
+        team: att.team,
         isGoalkeeper: att.asGoalkeeper || att.player.isGoalkeeper,
         avg: roundedAvg,
         count: countMap.get(att.playerId) ?? 0,
@@ -192,6 +193,7 @@ async function MatchVotingAdminView({ params }: { params: Promise<{ id: string }
                           {p.avg > 0 && p.rank === 1 && <span className="text-xs leading-none shrink-0">🥇</span>}
                           {p.avg > 0 && p.rank === 2 && <span className="text-xs leading-none shrink-0">🥈</span>}
                           {p.avg > 0 && p.rank === 3 && <span className="text-xs leading-none shrink-0">🥉</span>}
+                          <TeamColorBadge team={p.team} />
                           <Link
                             href={`/perfil/${p.id}`}
                             className="truncate font-bold text-moss hover:text-brick hover:underline"

@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight, Radio, Trophy, User, Vote } from "lucide-react";
 import { db } from "@/lib/db";
 import { isAdmin } from "@/lib/auth";
 import { formatMatchDate } from "@/lib/format";
-import { GloveBadge, Loading, StatusStamp } from "@/components/ui";
+import { GloveBadge, Loading, StatusStamp, TeamColorBadge } from "@/components/ui";
 import SpotlightCard from "@/components/SpotlightCard";
 import GlareHover from "@/components/GlareHover";
 import TiltedCard from "@/components/TiltedCard";
@@ -50,6 +50,7 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
       return {
         id: att.playerId,
         name: att.player.name,
+        team: att.team,
         isGoalkeeper: att.asGoalkeeper || att.player.isGoalkeeper,
         avg,
         votesCount: countMap.get(att.playerId) ?? 0,
@@ -71,10 +72,10 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
     <div className="flex flex-col gap-5">
       <SpotlightCard className="border border-moss/15 bg-paper p-4 sm:p-5 rounded-2xl shadow-hard fut-grid-bg">
         <Link
-          href="/"
+          href="/historico"
           className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider text-moss-soft hover:text-brick transition-colors mb-2.5"
         >
-          <ArrowLeft className="size-3.5" /> Voltar
+          <ArrowLeft className="size-3.5" /> Voltar ao Histórico
         </Link>
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -134,7 +135,7 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
             <div>
               <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-brick">
                 <Radio className="size-3 animate-pulse text-brick" />
-                <ShinyText text="Urna aberta" color="#b47a16" shineColor="#16281e" speed={1.8} />
+                <ShinyText text="Votação Aberta" color="#b47a16" shineColor="#16281e" speed={1.8} />
               </span>
               <span className="block font-serif text-lg leading-tight group-hover:text-brick transition-colors">
                 Votação Pós-Jogo
@@ -249,6 +250,7 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
                         <td className="py-2.5 px-3 min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
                             {medal && <span className="text-sm leading-none shrink-0">{medal}</span>}
+                            <TeamColorBadge team={p.team} />
                             <Link
                               href={`/perfil/${p.id}`}
                               className="font-bold text-moss hover:text-brick hover:underline truncate"
@@ -305,6 +307,7 @@ async function MatchView({ params }: { params: Promise<{ id: string }> }) {
                   <span className="inline-flex items-center justify-center min-w-6 h-5 px-1.5 rounded-md bg-moss/10 text-moss font-mono text-[10px] font-extrabold shrink-0">
                     {i + 1}
                   </span>
+                  <TeamColorBadge team={a.team} />
                   <span className="truncate font-bold text-sm text-moss group-hover:text-brick transition-colors">
                     {a.player.name}
                   </span>
