@@ -105,6 +105,26 @@ describe("Unit Tests — Rating & Medals (src/lib/rating.ts)", () => {
     const robustOutliers = computeMatchRobustAverages(targetWithOutliers);
     assert.equal(robustOutliers.get("pTarget")?.avg, 3.0);
   });
+
+  it("scales match score amplitude so max reaches 5.0 and min reaches 1.0", () => {
+    // Suppose voters give narrow cluster of scores: 3.2, 3.4, 3.8
+    const votes = [
+      { voterId: "v1", targetId: "pLow", score: 3.2 },
+      { voterId: "v1", targetId: "pMid", score: 3.4 },
+      { voterId: "v1", targetId: "pHigh", score: 3.8 },
+      { voterId: "v2", targetId: "pLow", score: 3.2 },
+      { voterId: "v2", targetId: "pMid", score: 3.5 },
+      { voterId: "v2", targetId: "pHigh", score: 3.8 },
+    ];
+    const res = computeMatchRobustAverages(votes);
+    // Highest player (pHigh) must reach >= 4.8 (here 5.0)
+    assert.equal(res.get("pHigh")?.avg, 5.0);
+    // Lowest player (pLow) must reach <= 1.2 (here 1.0)
+    assert.equal(res.get("pLow")?.avg, 1.0);
+    // Middle player scales proportionally
+    const midAvg = res.get("pMid")?.avg ?? 0;
+    assert.ok(midAvg > 1.0 && midAvg < 5.0);
+  });
 });
 
 describe("Unit Tests — Date Formatting (src/lib/format.ts)", () => {

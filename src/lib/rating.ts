@@ -62,7 +62,9 @@ export function computeMatchRobustAverages(
     votesByTarget.set(v.targetId, list);
   }
 
-  // 3. Calcular média aparada/ponderada robusta para cada atleta
+  // 3. Calcular média aparada/ponderada robusta preliminar para cada atleta
+  const unscaledAverages: { targetId: string; avg: number; count: number }[] = [];
+
   for (const [targetId, targetVotes] of votesByTarget.entries()) {
     const count = targetVotes.length;
     if (count === 0) continue;
@@ -86,9 +88,50 @@ export function computeMatchRobustAverages(
       totalWeight += itemWeight;
     }
 
-    const rawAvg = totalWeight > 0 ? weightedSum / totalWeight : 0;
-    const roundedAvg = Math.round(rawAvg * 10) / 10;
-    result.set(targetId, { avg: roundedAvg, count });
+    const rawAvg = totalWeight > 0 ? weightedSum / totalWeight : 1.0;
+    unscaledAverages.push({ targetId, avg: rawAvg, count });
+  }
+
+  if (unscaledAverages.length === 0) return result;
+
+  // 4. Calibração e Expansão de Amplitude (Min-Max Rescaling / Stretch)
+  // O objetivo é garantir que a amplitude do resultado seja expandida de forma que:
+  // - O maior jogador atinja >= 4.8 (alcançando 5 estrelas / topo)
+  // - O menor jogador atinja <= 1.2 (alcançando 1 estrela / base)
+  // - As notas intermediárias preservem proporcionalmente a distância e fiquem contidas em [1.0, 5.0].
+  const TARGET_MIN = 1.0;
+  const TARGET_MAX = 5.0;
+
+  if (unscaledAverages.length === 1) {
+    const only = unscaledAverages[0];
+    const rounded = Math.round(Math.max(TARGET_MIN, Math.min(TARGET_MAX, only.avg)) * 10) / 10;
+    result.set(only.targetId, { avg: rounded, count: only.count });
+    return result;
+  }
+
+  let minAvg = Infinity;
+  let maxAvg = -Infinity;
+  for (const item of unscaledAverages) {
+    if (item.avg < minAvg) minAvg = item.avg;
+    if (item.avg > maxAvg) maxAvg = item.avg;
+  }
+
+  const currentSpan = maxAvg - minAvg;
+
+  for (const item of unscaledAverages) {
+    let finalAvg: number;
+    if (currentSpan < 0.001) {
+      // Se todos empataram com exatamente a mesma nota
+      finalAvg = item.avg;
+    } else {
+      // Mapeamento linear para esticar a amplitude cobrindo de 1.0 a 5.0
+      const normalized = (item.avg - minAvg) / currentSpan;
+      finalAvg = TARGET_MIN + normalized * (TARGET_MAX - TARGET_MIN);
+    }
+
+    const clamped = Math.max(TARGET_MIN, Math.min(TARGET_MAX, finalAvg));
+    const roundedAvg = Math.round(clamped * 10) / 10;
+    result.set(item.targetId, { avg: roundedAvg, count: item.count });
   }
 
   return result;
