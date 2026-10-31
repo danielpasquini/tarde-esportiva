@@ -29,7 +29,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://tarde-esportiva.vercel.app"),
   title: { default: "Tarde Esportiva", template: "%s · Tarde Esportiva" },
-  description: "Organização de partidas de futebol: confirmação de presença, notas e histórico pós-jogo.",
+  description: "Organização de partidas de futebol: histórico de partidas e notas.",
   applicationName: "Tarde Esportiva",
   appleWebApp: { capable: true, title: "Tarde Esportiva", statusBarStyle: "default" },
   openGraph: {
@@ -37,12 +37,21 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     siteName: "Tarde Esportiva",
     title: "Tarde Esportiva",
-    description: "Organização de partidas de futebol: confirmação de presença, notas e histórico pós-jogo.",
+    description: "Organização de partidas de futebol: histórico de partidas e notas.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Tarde Esportiva",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Tarde Esportiva",
-    description: "Organização de partidas de futebol: confirmação de presença, notas e histórico pós-jogo.",
+    description: "Organização de partidas de futebol: histórico de partidas e notas.",
+    images: ["/opengraph-image"],
   },
 };
 

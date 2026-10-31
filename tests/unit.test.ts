@@ -240,10 +240,33 @@ describe("Unit Tests — UI Layout & Rectangular Design Rules", () => {
   it("defines OpenGraph preview images and metadataBase for WhatsApp unfurl", () => {
     const layoutContent = fs.readFileSync(path.join(rootDir, "src/app/layout.tsx"), "utf8");
     assert.ok(layoutContent.includes("metadataBase: new URL"), "layout.tsx must define metadataBase");
-    assert.ok(fs.existsSync(path.join(rootDir, "src/app/opengraph-image.tsx")), "Root opengraph-image.tsx must exist");
     assert.ok(
-      fs.existsSync(path.join(rootDir, "src/app/votar/[token]/opengraph-image.tsx")),
-      "Vote token opengraph-image.tsx must exist",
+      layoutContent.includes("Organização de partidas de futebol: histórico de partidas e notas."),
+      "layout.tsx must use the requested description",
+    );
+    assert.ok(fs.existsSync(path.join(rootDir, "src/app/opengraph-image.tsx")), "Root opengraph-image.tsx must exist");
+
+    const ogContent = fs.readFileSync(path.join(rootDir, "src/app/opengraph-image.tsx"), "utf8");
+    assert.ok(ogContent.includes("<svg"), "OG image must use SVG stars for reliable rendering");
+    assert.ok(
+      ogContent.includes("Futebol, histórico de partidas, notas"),
+      "OG image must contain 'Futebol, histórico de partidas, notas'",
+    );
+    assert.ok(
+      !ogContent.includes("CÉDULA DE VOTAÇÃO"),
+      "OG image must not contain 'CÉDULA DE VOTAÇÃO'",
+    );
+
+    const votarContent = fs.readFileSync(path.join(rootDir, "src/app/votar/page.tsx"), "utf8");
+    assert.ok(
+      votarContent.includes("Organização de partidas de futebol: histórico de partidas e notas."),
+      "/votar must use requested description",
+    );
+
+    const tokenContent = fs.readFileSync(path.join(rootDir, "src/app/votar/[token]/page.tsx"), "utf8");
+    assert.ok(
+      tokenContent.includes("Organização de partidas de futebol: histórico de partidas e notas."),
+      "/votar/[token] must use requested description",
     );
   });
 });

@@ -53,10 +53,17 @@ async function VotarRedirectInner({
 
 export const metadata: Metadata = {
   title: "Cédula de Votação",
-  description: "Cédula de votação e avaliação dos jogadores da partida.",
+  description: "Organização de partidas de futebol: histórico de partidas e notas.",
   openGraph: {
-    title: "Cédula de Votação • Tarde Esportiva",
-    description: "Cédula de votação e avaliação dos jogadores da partida.",
+    title: "Tarde Esportiva",
+    description: "Organização de partidas de futebol: histórico de partidas e notas.",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Tarde Esportiva" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tarde Esportiva",
+    description: "Organização de partidas de futebol: histórico de partidas e notas.",
+    images: ["/opengraph-image"],
   },
 };
 

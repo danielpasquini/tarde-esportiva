@@ -8,6 +8,9 @@ export const size = {
 export const contentType = "image/png";
 
 export default function Image() {
+  const starPath =
+    "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z";
+
   return new ImageResponse(
     (
       <div
@@ -56,27 +59,31 @@ export default function Image() {
             position: "relative",
           }}
         >
-          {/* 3 Stars */}
+          {/* 3 SVG Stars */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               gap: 16,
-              marginBottom: 20,
-              color: "#d9a520",
-              fontSize: 36,
+              marginBottom: 24,
             }}
           >
-            <span>★</span>
-            <span style={{ fontSize: 50 }}>★</span>
-            <span>★</span>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="#d9a520">
+              <path d={starPath} />
+            </svg>
+            <svg width="54" height="54" viewBox="0 0 24 24" fill="#d9a520">
+              <path d={starPath} />
+            </svg>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="#d9a520">
+              <path d={starPath} />
+            </svg>
           </div>
 
           {/* Main Title */}
           <div
             style={{
-              fontSize: 78,
+              fontSize: 84,
               fontWeight: 900,
               color: "#f6f4ef",
               letterSpacing: "0.06em",
@@ -89,42 +96,20 @@ export default function Image() {
             TARDE ESPORTIVA
           </div>
 
-          {/* Tag / Badge */}
+          {/* Subtitle */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              backgroundColor: "rgba(217, 165, 32, 0.15)",
-              border: "2px solid #d9a520",
-              borderRadius: 14,
-              padding: "10px 32px",
-              marginBottom: 28,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 26,
-                fontWeight: 800,
-                color: "#d9a520",
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-              }}
-            >
-              CÉDULA DE VOTAÇÃO • PÓS-JOGO
-            </span>
-          </div>
-
-          {/* Footer note */}
-          <div
-            style={{
-              fontSize: 20,
+              justifyContent: "center",
+              color: "#d9a520",
+              fontSize: 28,
               fontWeight: 700,
-              color: "#a9bcae",
-              letterSpacing: "0.15em",
+              letterSpacing: "0.18em",
               textTransform: "uppercase",
             }}
           >
-            Futebol • Estatísticas • Avaliação dos Jogadores
+            Futebol, histórico de partidas, notas
           </div>
         </div>
       </div>
