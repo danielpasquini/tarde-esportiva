@@ -56,13 +56,17 @@ export function VoteForm({
   const set = (id: string) => (v: number) => setScores((s) => ({ ...s, [id]: v }));
   const rated = Object.values(scores).filter(Boolean).length;
 
+  // Separar goleiros dos jogadores de linha
+  const goalkeepers = targets.filter((p) => p.isGoalkeeper);
+  const fieldPlayers = targets.filter((p) => !p.isGoalkeeper);
+
   // Se o votante tiver time definido, separar companheiros do mesmo time e os demais
   const hasVoterTeam = Boolean(voter.team);
   const teammates = hasVoterTeam
-    ? targets.filter((p) => p.team && p.team === voter.team)
-    : targets;
+    ? fieldPlayers.filter((p) => p.team && p.team === voter.team)
+    : fieldPlayers;
   const others = hasVoterTeam
-    ? targets.filter((p) => !p.team || p.team !== voter.team)
+    ? fieldPlayers.filter((p) => !p.team || p.team !== voter.team)
     : [];
 
   const send = () =>
@@ -141,6 +145,28 @@ export function VoteForm({
           </details>
         )}
       </SpotlightCard>
+
+      {/* Tabela de Goleiros abaixo separada do dropdown */}
+      {goalkeepers.length > 0 && (
+        <SpotlightCard className="border border-moss/15 bg-paper rounded-2xl shadow-hard overflow-hidden">
+          <div className="px-4 py-3 bg-moss/8 border-b border-moss/10 flex items-center justify-between text-xs font-bold text-moss">
+            <div className="flex items-center gap-2">
+              <GloveBadge />
+              <span className="font-serif text-lg leading-none tracking-wide text-moss">
+                Goleiros ({goalkeepers.length})
+              </span>
+            </div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-moss-soft">
+              (opcional)
+            </span>
+          </div>
+          <ul>
+            {goalkeepers.map((p) => (
+              <VoteRow key={p.id} p={p} value={scores[p.id] ?? 0} onChange={set(p.id)} />
+            ))}
+          </ul>
+        </SpotlightCard>
+      )}
 
       {message && (
         <div

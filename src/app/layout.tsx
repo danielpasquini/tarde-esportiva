@@ -27,10 +27,23 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://tarde-esportiva.vercel.app"),
   title: { default: "Tarde Esportiva", template: "%s · Tarde Esportiva" },
   description: "Organização de partidas de futebol: confirmação de presença, notas e histórico pós-jogo.",
   applicationName: "Tarde Esportiva",
   appleWebApp: { capable: true, title: "Tarde Esportiva", statusBarStyle: "default" },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    siteName: "Tarde Esportiva",
+    title: "Tarde Esportiva",
+    description: "Organização de partidas de futebol: confirmação de presença, notas e histórico pós-jogo.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tarde Esportiva",
+    description: "Organização de partidas de futebol: confirmação de presença, notas e histórico pós-jogo.",
+  },
 };
 
 export const viewport: Viewport = {

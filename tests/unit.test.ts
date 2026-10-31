@@ -218,4 +218,32 @@ describe("Unit Tests — UI Layout & Rectangular Design Rules", () => {
     assert.ok(!profileContent.includes("JOGADOR DE LINHA"), "Profile header must show only PLAYER CARD");
     assert.ok(profileContent.includes('text="PLAYER CARD"'), "Profile header should display PLAYER CARD");
   });
+
+  it("organizes VoteForm in order: teammates -> dropdown others -> goalkeepers table -> submit button", () => {
+    const voteFormContent = fs.readFileSync(path.join(rootDir, "src/components/vote-form.tsx"), "utf8");
+    const teammatesIdx = voteFormContent.indexOf("Seus Companheiros de Equipe");
+    const othersIdx = voteFormContent.indexOf("Votar nos outros jogadores");
+    const goalkeepersIdx = voteFormContent.indexOf("Goleiros (");
+    const submitIdx = voteFormContent.indexOf('id="enviar-votos"');
+
+    assert.ok(teammatesIdx > 0, "VoteForm should render 'Seus Companheiros de Equipe'");
+    assert.ok(othersIdx > 0, "VoteForm should render 'Votar nos outros jogadores' dropdown");
+    assert.ok(goalkeepersIdx > 0, "VoteForm should render separate 'Goleiros' table");
+    assert.ok(submitIdx > 0, "VoteForm should have submit button");
+
+    assert.ok(
+      teammatesIdx < othersIdx && othersIdx < goalkeepersIdx && goalkeepersIdx < submitIdx,
+      "Order must be: teammates -> others dropdown -> goalkeepers table -> submit button",
+    );
+  });
+
+  it("defines OpenGraph preview images and metadataBase for WhatsApp unfurl", () => {
+    const layoutContent = fs.readFileSync(path.join(rootDir, "src/app/layout.tsx"), "utf8");
+    assert.ok(layoutContent.includes("metadataBase: new URL"), "layout.tsx must define metadataBase");
+    assert.ok(fs.existsSync(path.join(rootDir, "src/app/opengraph-image.tsx")), "Root opengraph-image.tsx must exist");
+    assert.ok(
+      fs.existsSync(path.join(rootDir, "src/app/votar/[token]/opengraph-image.tsx")),
+      "Vote token opengraph-image.tsx must exist",
+    );
+  });
 });

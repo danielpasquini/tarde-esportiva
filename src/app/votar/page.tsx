@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -49,6 +50,15 @@ async function VotarRedirectInner({
     </div>
   );
 }
+
+export const metadata: Metadata = {
+  title: "Cédula de Votação",
+  description: "Cédula de votação e avaliação dos jogadores da partida.",
+  openGraph: {
+    title: "Cédula de Votação • Tarde Esportiva",
+    description: "Cédula de votação e avaliação dos jogadores da partida.",
+  },
+};
 
 export default function VotarRootPage({
   searchParams,

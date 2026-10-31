@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -154,6 +155,29 @@ async function VoteView({
       />
     </div>
   );
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}): Promise<Metadata> {
+  const { token } = await params;
+  return {
+    title: "Cédula de Votação",
+    description: "Avalie o desempenho dos jogadores da partida na Tarde Esportiva.",
+    openGraph: {
+      title: "Cédula de Votação • Tarde Esportiva",
+      description: "Avalie seus companheiros de time e goleiros na partida da Tarde Esportiva.",
+      url: `/votar/${token}`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Cédula de Votação • Tarde Esportiva",
+      description: "Avalie seus companheiros de time e goleiros na partida da Tarde Esportiva.",
+    },
+  };
 }
 
 export default function VotePage({ params, searchParams }: PageProps<"/votar/[token]">) {
